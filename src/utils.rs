@@ -2,58 +2,70 @@ use crossterm::style::{Attribute, Color};
 use std::path::Path;
 use tree_sitter::{Language, Node};
 
+macro_rules! define_colors {
+    ($($name:ident => (r: $r:expr, g: $g:expr, b: $b:expr)),* $(,)?) => {
+        $(const $name: Color = Color::Rgb { r: $r, g: $g, b: $b };)*
+        pub struct Colors;
+        impl Colors {
+            $(pub const $name: Color = $name;)*
+        }
+    };
+}
+
 pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: Node) -> (Color, Option<Attribute>) {
-    let blue = Color::Rgb { r: 103, g: 179, b: 255 };
-    let green = Color::Rgb { r: 45, g: 232, b: 170 };
-    let dgreen = Color::Rgb { r: 71, g: 131, b: 112 };
-    let aqua = Color::Rgb { r: 78, g: 162, b: 193 };
-    let cyan = Color::Rgb { r: 48, g: 232, b: 233 };
-    let grey = Color::Rgb { r: 142, g: 178, b: 217 };
-    let orange = Color::Rgb { r: 255, g: 139, b: 126 };
-    let yellow = Color::Rgb { r: 231, g: 205, b: 125 };
-    let magenta = Color::Rgb { r: 205, g: 162, b: 244 };
+    define_colors! {
+        GREY => (r:142, g:178, b:217),
+        CYAN => (r:48, g:232, b:233),
+        AQUA => (r:78, g:162, b:193),
+        BLUE => (r:103, g:179, b:255),
+        GREEN => (r:45, g:232, b:170),
+        YELLOW => (r:231, g:205, b:125),
+        ORANGE => (r:255, g:139, b:126),
+        MAGENTA => (r:205, g:162, b:244),
+        DARK_GREEN => (r:71, g:131, b:112),
+    };
 
     if lang == "html" && matches!(node.kind(), "<" | ">" | "</") {
-        return (dgreen, None);
+        return (Colors::DARK_GREEN, None);
     }
 
     match node.kind() {
         "line_comment" => (Color::DarkGrey, None),
         "raw_text" => (Color::Grey, None),
-        "attribute_name" | "word" => (magenta, None),
-        "tag_name" => (green, None),
-        "case" | "auto" => (aqua, None),
-        "#ifndef" | "#define" | "#include" => (grey, Some(Attribute::Italic)),
+        "attribute_name" | "word" => (Colors::MAGENTA, None),
+        "tag_name" => (Colors::GREEN, None),
+        "case" | "auto" => (Colors::AQUA, None),
+        "#ifndef" | "#define" | "#include" => (Colors::GREY, Some(Attribute::Italic)),
         "null_scalar" => (Color::Grey, None),
-        "regex_pattern" | "unit" | "@keyframes" => (yellow, None),
-        "boolean" | "boolean_scalar" => (blue, None),
-        "fenced_code_block" => (blue, None),
-        "color_value" | "#" => (orange, None),
+        "regex_pattern" | "unit" | "@keyframes" => (Colors::YELLOW, None),
+        "boolean" | "boolean_scalar" => (Colors::BLUE, None),
+        "fenced_code_block" => (Colors::BLUE, None),
+        "color_value" | "#" => (Colors::ORANGE, None),
         "code_fence_content" => (Color::Grey, None),
-        "list_marker_minus" => (grey, None),
-        "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (yellow, None),
-        "mutable_specifier" => (cyan, Some(Attribute::Italic)),
+        "list_marker_minus" => (Colors::GREY, None),
+        "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (Colors::YELLOW, None),
+        "mutable_specifier" => (Colors::CYAN, Some(Attribute::Italic)),
         _ => match highlight_name {
-            "boolean" => (blue, None),
-            "punctuation.special" | "text.title" => (orange, None),
-            "definition.module" => (blue, None),
-            "property" => (magenta, None),
-            "function" => (green, None),
-            "function.macro" => (aqua, Some(Attribute::Italic)),
-            "function.method" | "constructor" => (cyan, None),
-            "keyword" | "keyword.operator" => (blue, None),
+            "boolean" => (Colors::BLUE, None),
+            "punctuation.special" | "text.title" => (Colors::ORANGE, None),
+            "definition.module" => (Colors::BLUE, None),
+            "property" => (Colors::MAGENTA, None),
+            "function" => (Colors::GREEN, None),
+            "function.macro" => (Colors::AQUA, Some(Attribute::Italic)),
+            "function.method" | "constructor" => (Colors::CYAN, None),
+            "keyword" | "keyword.operator" => (Colors::BLUE, None),
             "comment" => (Color::DarkGrey, None),
-            "operator" | "attribute" | "punctuation.bracket" => (grey, None),
-            "string" | "string.special" | "comment.documentation" => (orange, None),
-            "variable.builtin" | "conditional" | "repeat" | "keyword.function" => (blue, None),
-            "variable" | "variable.parameter" => (magenta, None),
-            "number" | "float" => (yellow, None),
-            "type" | "type.builtin" => (cyan, None),
-            "type.enum.variant" => (blue, None),
-            "constant" | "constant.builtin" => (blue, None),
+            "operator" | "attribute" | "punctuation.bracket" => (Colors::GREY, None),
+            "string" | "string.special" | "comment.documentation" => (Colors::ORANGE, None),
+            "variable.builtin" | "conditional" | "repeat" | "keyword.function" => (Colors::BLUE, None),
+            "variable" | "variable.parameter" => (Colors::MAGENTA, None),
+            "number" | "float" => (Colors::YELLOW, None),
+            "type" | "type.builtin" => (Colors::CYAN, None),
+            "type.enum.variant" => (Colors::BLUE, None),
+            "constant" | "constant.builtin" => (Colors::BLUE, None),
             "punctuation" | "punctuation.delimiter" => (Color::White, None),
             "label" => (Color::Green, None),
-            "module" => (blue, None),
+            "module" => (Colors::BLUE, None),
             "error" => (Color::Red, None),
             _ => (Color::Reset, None),
         },
