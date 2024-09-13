@@ -1,18 +1,12 @@
 [package]
 name = "tree-sitter-asm"
-version = "0.22.6"
+version = "0.23.0"
 edition = "2021"
-build = "bindings/rust/build.rs"
-include = [
-  "bindings/rust/*",
-  "grammar.js",
-  "queries/*",
-  "src/*",
-]
+build = "bindings/build.rs"
 
 [lib]
 name = "tree_sitter_asm"
-path = "bindings/rust/lib.rs"
+path = "bindings/lib.rs"
 
 [dependencies.tree-sitter-language]
 version = "0.1.0"

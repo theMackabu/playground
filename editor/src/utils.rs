@@ -21,7 +21,7 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
     }
 
     match node.kind() {
-        "line_comment" => (Color::DarkGrey, None),
+        "line_comment" | "js_comment" => (Color::DarkGrey, None),
         "raw_text" => (Color::Grey, None),
         "attribute_name" | "word" => (Colors::MAGENTA, None),
         "tag_name" => (Colors::GREEN, None),
@@ -48,7 +48,7 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
             "comment" => (Color::DarkGrey, None),
             "operator" | "attribute" | "punctuation.bracket" => (Colors::GREY, None),
             "string" | "string.special" | "comment.documentation" => (Colors::ORANGE, None),
-            "variable.builtin" | "conditional" | "repeat" | "keyword.function" => (Colors::BLUE, None),
+            "variable.builtin" | "conditional" | "repeat" | "keyword.function" | "keyword.return" => (Colors::BLUE, None),
             "variable" | "variable.parameter" => (Colors::MAGENTA, None),
             "number" | "float" => (Colors::YELLOW, None),
             "type" | "type.builtin" => (Colors::CYAN, None),
@@ -133,7 +133,7 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         // Some("kt" | "ktm" | "kts") => Some((tree_sitter_kotlin::LANGUAGE.into(), "kotlin")),
         // Some("ll") => Some((tree_sitter_llvm::LANGUAGE.into(), "llvm")),
         // Some("l" | "lex") => Some((tree_sitter_lex::LANGUAGE.into(), "lex")),
-        // Some("lua") => Some((tree_sitter_lua::LANGUAGE.into(), "lua")),
+        Some("lua") => Some((tree_sitter_lua::LANGUAGE.into(), (tree_sitter_lua::HIGHLIGHTS_QUERY, tree_sitter_lua::INJECTIONS_QUERY, ""), "lua")),
         // Some("ls") => Some((tree_sitter_livescript::LANGUAGE.into(), "livescript")),
         // Some("lol") => Some((tree_sitter_lolcode::LANGUAGE.into(), "lolcode")),
         // Some("lisp" | "asd" | "lsp") => Some((tree_sitter_common_lisp::LANGUAGE.into(), "common_lisp")),
@@ -160,7 +160,7 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         // Some("rb" | "ruby") => Some((tree_sitter_ruby::LANGUAGE.into(), "ruby")),
         Some("rs") => Some((tree_sitter_rust::LANGUAGE.into(), (tree_sitter_rust::HIGHLIGHTS_QUERY, "", ""), "rust")),
         Some("sh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "bash")),
-        // Some("scss") => Some((tree_sitter_scss::LANGUAGE.into(), "scss")),
+        Some("scss") => Some((tree_sitter_scss::LANGUAGE.into(), (tree_sitter_scss::HIGHLIGHTS_QUERY, "", ""), "scss")),
         // Some("sql") => Some((tree_sitter_sql::LANGUAGE.into(), "sql")),
         // Some("sass") => Some((tree_sitter_sass::LANGUAGE.into(), "sass")),
         // Some("scala") => Some((tree_sitter_scala::LANGUAGE.into(), "scala")),
@@ -169,7 +169,6 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         // Some("swift") => Some((tree_sitter_swift::LANGUAGE.into(), "swift")),
         Some("toml") => Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "toml")),
         // Some("tcl") => Some((tree_sitter_tcl::LANGUAGE.into(), "tcl")),
-        // Some("tex") => Some((tree_sitter_latex::LANGUAGE.into(), "latex")),
         Some("tsx") => Some((tree_sitter_typescript::LANGUAGE_TSX.into(), (tree_sitter_typescript::HIGHLIGHTS_QUERY, "", ""), "tsx")),
         Some("ts") => Some((tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(), (tree_sitter_typescript::HIGHLIGHTS_QUERY, "", ""), "typescript")),
         // Some("vala") => Some((tree_sitter_vala::LANGUAGE.into(), "vala")),

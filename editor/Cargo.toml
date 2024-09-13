@@ -1,5 +1,5 @@
 [package]
-name = "editor-rewrite"
+name = "meow"
 version = "0.0.1"
 edition = "2021"
 
@@ -10,6 +10,11 @@ crossterm = "0.27.0"
 ropey = "1.6.1"
 unicode-segmentation = "1.11.0"
 unicode-width = "0.1.13"
+
+# local syntaxes
+tree-sitter-html = { path = "crates/tree-sitter-html" }
+tree-sitter-asm = { path = "crates/tree-sitter-asm" }
+tree-sitter-scss = { path = "crates/tree-sitter-scss" }
 
 # tree sitter
 tree-sitter = "0.23.0"
@@ -27,8 +32,7 @@ tree-sitter-yaml = "0.6.1"
 tree-sitter-r = "1.1.0"
 tree-sitter-c = "0.23.0"
 tree-sitter-css = "0.23.0"
-tree-sitter-html = { path = "crates/tree-sitter-html" }
-tree-sitter-asm = { path = "crates/tree-sitter-asm" }
+tree-sitter-lua = "0.2.0"
 
 [build-dependencies]
 cc = "*"

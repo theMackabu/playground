@@ -1,11 +1,11 @@
 [package]
-name = "tree-sitter-html"
+name = "tree-sitter-scss"
 version = "0.23.0"
 edition = "2021"
 build = "bindings/build.rs"
 
 [lib]
-name = "tree_sitter_html"
+name = "tree_sitter_scss"
 path = "bindings/lib.rs"
 
 [dependencies.tree-sitter-language]
