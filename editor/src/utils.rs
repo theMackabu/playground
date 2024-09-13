@@ -64,6 +64,24 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
 }
 
 pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static str, &'static str), &'static str)> {
+    if let Some(file_name_str) = file_name.file_name().and_then(|s| s.to_str()) {
+        match file_name_str.to_lowercase().as_str() {
+            "dockerfile" => return Some((tree_sitter_docker::LANGUAGE.into(), (tree_sitter_docker::HIGHLIGHTS_QUERY, "", ""), "dockerfile")),
+            "makefile" => return Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "makefile")),
+            "maidfile" => return Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "maidfile")),
+            _ if file_name_str.starts_with('.') => {
+                let without_dot = file_name_str.trim_start_matches('.');
+                match without_dot {
+                    "zshrc" | "bashrc" | "bash_profile" | "zprofile" | "gitignore" | "gitattributes" => {
+                        return Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "rc"))
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
     match file_name.extension().and_then(|s| s.to_str()) {
         // Some("abap") => Some((tree_sitter_abap::LANGUAGE.into(), "abap")),
         // Some("ada") => Some((tree_sitter_ada::LANGUAGE.into(), "ada")),
@@ -92,7 +110,6 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         // Some("d" | "di") => Some((tree_sitter_d::LANGUAGE.into(), "d")),
         // Some("dart") => Some((tree_sitter_dart::LANGUAGE.into(), "dart")),
         // Some("diff" | "patch") => Some((tree_sitter_diff::LANGUAGE.into(), "diff")),
-        // Some("dockerfile") => Some((tree_sitter_dockerfile::LANGUAGE.into(), "dockerfile")),
         // Some("ex" | "exs") => Some((tree_sitter_elixir::LANGUAGE.into(), "elixir")),
         // Some("elm") => Some((tree_sitter_elm::LANGUAGE.into(), "elm")),
         // Some("el") => Some((tree_sitter_emacs_lisp::LANGUAGE.into(), "emacs_lisp")),
@@ -185,6 +202,24 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
 }
 
 pub fn file_type(file_name: &Path) -> String {
+    if let Some(file_name_str) = file_name.file_name().and_then(|s| s.to_str()) {
+        match file_name_str.to_lowercase().as_str() {
+            "dockerfile" => return "dockerfile".to_string(),
+            "makefile" => return "makefile".to_string(),
+            "maidfile" => return "maid".to_string(),
+            "cmakelists.txt" => return "cmake".to_string(),
+            _ if file_name_str.starts_with('.') => {
+                let without_dot = file_name_str.trim_start_matches('.');
+                match without_dot {
+                    "zshrc" | "bashrc" | "bash_profile" | "zprofile" => return "shell".to_string(),
+                    "gitignore" | "gitattributes" => return "git".to_string(),
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
     match file_name.extension().and_then(|s| s.to_str()) {
         Some("abap") => "ABAP",
         Some("ada") => "Ada",

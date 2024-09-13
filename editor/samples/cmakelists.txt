@@ -1,0 +1,87 @@
+cmake_minimum_required(VERSION 3.10)
+
+# Set the project name and version
+project(MyProject VERSION 1.0)
+
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Add an option for building tests
+option(BUILD_TESTS "Build the tests" ON)
+
+# Find required packages
+find_package(Boost REQUIRED COMPONENTS system filesystem)
+
+# Add a library target
+add_library(mylib STATIC
+	 src/mylib.cpp
+	 include/mylib.h
+)
+
+# Set include directories for the library
+target_include_directories(mylib PUBLIC
+	 ${CMAKE_CURRENT_SOURCE_DIR}/include
+	 ${Boost_INCLUDE_DIRS}
+)
+
+# Link Boost libraries to our library
+target_link_libraries(mylib PUBLIC
+	 Boost::system
+	 Boost::filesystem
+)
+
+# Add an executable target
+add_executable(myapp
+	 src/main.cpp
+)
+
+# Link our library to the executable
+target_link_libraries(myapp PRIVATE mylib)
+
+# Install targets
+install(TARGETS myapp mylib
+	 RUNTIME DESTINATION bin
+	 LIBRARY DESTINATION lib
+	 ARCHIVE DESTINATION lib
+)
+
+# Install headers
+install(FILES include/mylib.h DESTINATION include)
+
+# Configure a header file to pass some of the CMake settings to the source code
+configure_file(src/config.h.in ${CMAKE_BINARY_DIR}/config.h)
+
+# Add the binary tree to the search path for include files so that we will find config.h
+target_include_directories(myapp PRIVATE ${CMAKE_BINARY_DIR})
+
+# Add compiler warnings
+if(MSVC)
+	 target_compile_options(myapp PRIVATE /W4)
+	 target_compile_options(mylib PRIVATE /W4)
+else()
+	 target_compile_options(myapp PRIVATE -Wall -Wextra -Wpedantic)
+	 target_compile_options(mylib PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Conditionally include tests
+if(BUILD_TESTS)
+	 enable_testing()
+	 add_subdirectory(tests)
+endif()
+
+# Generate documentation with Doxygen
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+	 set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+	 set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+	 configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+
+	 add_custom_target(docs
+		  COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+		  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		  COMMENT "Generating API documentation with Doxygen"
+		  VERBATIM
+	 )
+endif()

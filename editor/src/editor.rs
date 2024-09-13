@@ -89,6 +89,10 @@ impl<L: LineLayout> TextEditor<L> {
     }
 
     pub fn update_tree(&mut self, start_byte: usize, old_end_byte: usize, new_end_byte: usize) {
+        if start_byte > self.text.len_bytes() || old_end_byte > self.text.len_bytes() || new_end_byte > self.text.len_bytes() {
+            return;
+        }
+
         if let Some(highlight_config) = &self.highlight_config {
             let mut parser = self.parser.lock().unwrap();
             let mut tree = self.tree.lock().unwrap();
