@@ -1,0 +1,6 @@
+[project]
+name = "rewrite"
+version = "0.0.1"
+
+[tasks.run]
+script = ["rm debug_output.log", "fleet run --release %{arg.1}"]

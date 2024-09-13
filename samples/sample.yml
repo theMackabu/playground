@@ -1,0 +1,80 @@
+# This is a sample YAML file demonstrating various YAML features
+---
+# Document start marker
+
+# Scalars
+string_value: Hello, World!
+integer_value: 42
+float_value: 3.14159
+boolean_value: true
+null_value: null
+
+# Multi-line strings
+literal_block: |
+  This is a literal block.
+  Line breaks are preserved.
+  Indentation is stripped.
+
+folded_style: >
+  This is a folded style.
+  Line breaks become spaces.
+  Blank lines become line breaks.
+
+# Lists
+simple_list:
+  - Item 1
+  - Item 2
+  - Item 3
+
+nested_list:
+  - - Nested Item 1
+    - Nested Item 2
+  - - Nested Item 3
+    - Nested Item 4
+
+# Dictionaries
+person:
+  name: John Doe
+  age: 30
+  occupation: Developer
+
+# Nested structures
+company:
+  name: Tech Corp
+  employees:
+    - name: Alice
+      position: CEO
+    - name: Bob
+      position: CTO
+
+# Anchors and aliases
+defaults: &defaults
+  timeout: 30
+  retries: 3
+
+development:
+  <<: *defaults
+  environment: development
+  debug: true
+
+production:
+  <<: *defaults
+  environment: production
+  debug: false
+
+# Complex mapping
+languages:
+  - language:
+      name: Python
+      created_by: Guido van Rossum
+      year: 1991
+  - language:
+      name: JavaScript
+      created_by: Brendan Eich
+      year: 1995
+
+# Sets
+fruits: !!set
+  ? apple
+  ? banana
+  ? cherry

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample HTML Page</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Internal CSS */
+        .internal-style {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome to Our Sample Page</h1>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home">
+            <h2>Home</h2>
+            <p>This is the home section of our sample page.</p>
+            <img src="/api/placeholder/300/200" alt="Placeholder image" class="responsive-image">
+        </section>
+
+        <section id="about">
+            <h2>About Us</h2>
+            <p>Learn more about our company:</p>
+            <ul>
+                <li>Founded in 2023</li>
+                <li>Located in Tech City</li>
+                <li>Specializing in web development</li>
+            </ul>
+        </section>
+
+        <section id="contact">
+            <h2>Contact Us</h2>
+            <form action="/submit-form" method="post">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" required></textarea>
+
+                <button type="submit">Send</button>
+            </form>
+        </section>
+
+        <article>
+            <h2>Latest News</h2>
+            <p>Check out our latest blog post about web development trends in 2023.</p>
+            <a href="#" class="button">Read More</a>
+        </article>
+
+        <aside>
+            <h3>Quick Links</h3>
+            <ul>
+                <li><a href="#">Our Services</a></li>
+                <li><a href="#">FAQ</a></li>
+                <li><a href="#">Testimonials</a></li>
+            </ul>
+        </aside>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Sample Company. All rights reserved.</p>
+        <div class="social-links">
+            <a href="#" aria-label="Facebook">
+                <i class="fab fa-facebook"></i>
+            </a>
+            <a href="#" aria-label="Twitter">
+                <i class="fab fa-twitter"></i>
+            </a>
+            <a href="#" aria-label="LinkedIn">
+                <i class="fab fa-linkedin"></i>
+            </a>
+        </div>
+    </footer>
+
+    <script>
+        // Inline JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded!');
+        });
+    </script>
+</body>
+</html>

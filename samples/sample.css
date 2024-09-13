@@ -1,0 +1,229 @@
+/* Reset some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Global styles */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header styles */
+header {
+    background-color: #f4f4f4;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    color: #333;
+}
+
+nav ul {
+    list-style-type: none;
+    display: flex;
+}
+
+nav ul li {
+    margin-right: 1rem;
+}
+
+nav a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+}
+
+nav a:hover {
+    color: #0066cc;
+}
+
+/* Main content styles */
+main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+section, article {
+    margin-bottom: 2rem;
+}
+
+h2 {
+    color: #0066cc;
+    margin-bottom: 1rem;
+}
+
+/* Form styles */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 0.5rem;
+}
+
+input, textarea {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #0066cc;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0052a3;
+}
+
+/* Responsive image */
+.responsive-image {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Button styles */
+.button {
+    display: inline-block;
+    background-color: #0066cc;
+    color: white;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0052a3;
+}
+
+/* Aside styles */
+aside {
+    background-color: #f4f4f4;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+aside h3 {
+    margin-bottom: 1rem;
+}
+
+aside ul {
+    list-style-type: none;
+}
+
+aside li {
+    margin-bottom: 0.5rem;
+}
+
+/* Footer styles */
+footer {
+    background-color: #333;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.social-links a {
+    color: white;
+    margin: 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Media query for responsiveness */
+@media (max-width: 768px) {
+    main {
+        grid-template-columns: 1fr;
+    }
+
+    nav ul {
+        flex-direction: column;
+    }
+
+    nav ul li {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* CSS Variables */
+:root {
+    --primary-color: #0066cc;
+    --secondary-color: #f4f4f4;
+    --text-color: #333;
+}
+
+/* Using CSS variables */
+h1, h2, h3 {
+    color: var(--primary-color);
+}
+
+/* Flexbox example */
+.flex-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Grid example */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* Animation example */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 1s ease-in;
+}
+
+/* Pseudo-classes and pseudo-elements */
+a:hover {
+    text-decoration: underline;
+}
+
+p::first-letter {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* CSS Transforms */
+.rotate:hover {
+    transform: rotate(5deg);
+}
+
+/* CSS Transitions */
+.transition {
+    transition: all 0.3s ease;
+}
+
+/* Gradients */
+.gradient-background {
+    background: linear-gradient(to right, #0066cc, #00cc66);
+}
+
+/* Box shadow */
+.shadow {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,28 @@
+[package]
+edition = "2021"
+name = "tree-sitter-html"
+version = "0.23.0"
+build = "bindings/rust/build.rs"
+include = [
+    "bindings/rust/*",
+    "grammar.js",
+    "queries/*",
+    "src/*",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+[lib]
+name = "tree_sitter_html"
+path = "bindings/rust/lib.rs"
+
+[dependencies.tree-sitter-language]
+version = "0.1.0"
+
+[dev-dependencies.tree-sitter]
+version = "0.23"
+
+[build-dependencies.cc]
+version = "1.0.87"
