@@ -1,8 +1,12 @@
-target
+# dotfiles
 .maid
 .cargo
-cargo.lock
+
+# todo 
 *.todo
-external
-generic
-kilo
+todo.*
+
+# artifacts
+*.log
+target
+fleet.toml
