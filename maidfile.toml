@@ -1,0 +1,17 @@
+[env]
+bin = "target"
+entry = "entry.rs"
+flags = "-O -C codegen-units=1"
+
+[project]
+name = "playground"
+
+[tasks.clean]
+script = ["rm -rf target", "mkdir target"]
+
+[tasks.run]
+script = ["maid build -q %{arg.1}", "./%{env.bin}/%{arg.1}"]
+
+[tasks.build]
+depends = ["clean"]
+script = ["rustc %{arg.1}/%{env.entry} %{env.flags} -o %{env.bin}/%{arg.1}"]

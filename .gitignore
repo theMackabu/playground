@@ -1,5 +1,8 @@
-/target
-/todo.*
-/fleet.toml
-/.cargo
-/*.log
+target
+.maid
+.cargo
+cargo.lock
+*.todo
+external
+generic
+kilo
