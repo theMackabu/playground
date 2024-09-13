@@ -1,28 +1,19 @@
+use crate::define_colors;
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
 use tree_sitter::{Language, Node};
 
-macro_rules! define_colors {
-    ($($name:ident => (r: $r:expr, g: $g:expr, b: $b:expr)),* $(,)?) => {
-        $(const $name: Color = Color::Rgb { r: $r, g: $g, b: $b };)*
-        pub struct Colors;
-        impl Colors {
-            $(pub const $name: Color = $name;)*
-        }
-    };
-}
-
 pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: Node) -> (Color, Option<Attribute>) {
     define_colors! {
-        GREY => (r:142, g:178, b:217),
-        CYAN => (r:48, g:232, b:233),
-        AQUA => (r:78, g:162, b:193),
-        BLUE => (r:103, g:179, b:255),
-        GREEN => (r:45, g:232, b:170),
-        YELLOW => (r:231, g:205, b:125),
-        ORANGE => (r:255, g:139, b:126),
-        MAGENTA => (r:205, g:162, b:244),
-        DARK_GREEN => (r:71, g:131, b:112),
+        GREY => { r:142, g:178, b:217 },
+        CYAN => { r:48, g:232, b:233 },
+        AQUA => { r:78, g:162, b:193 },
+        BLUE => { r:103, g:179, b:255 },
+        GREEN => { r:45, g:232, b:170 },
+        YELLOW => { r:231, g:205, b:125 },
+        ORANGE => { r:255, g:139, b:126 },
+        MAGENTA => { r:205, g:162, b:244 },
+        DARK_GREEN => { r:71, g:131, b:112 },
     };
 
     if lang == "html" && matches!(node.kind(), "<" | ">" | "</") {

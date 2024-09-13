@@ -1,5 +1,6 @@
 mod clipboard;
 mod editor;
+mod macros;
 mod terminal;
 mod ui;
 mod unicode;
