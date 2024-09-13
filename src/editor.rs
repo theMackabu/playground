@@ -84,25 +84,57 @@ impl<L: LineLayout> TextEditor<L> {
             highlight_config,
         };
 
-        editor.update_tree(0, 0, content.len(), content);
+        editor.update_tree(0, 0, content.len());
         return editor;
     }
 
-    pub fn update_tree(&mut self, start_byte: usize, old_end_byte: usize, new_end_byte: usize, new_text: &str) {
+    pub fn update_tree(&mut self, start_byte: usize, old_end_byte: usize, new_end_byte: usize) {
         if let Some(highlight_config) = &self.highlight_config {
             let mut parser = self.parser.lock().unwrap();
             let mut tree = self.tree.lock().unwrap();
             let mut highlight_map = self.highlight_map.lock().unwrap();
+
+            let start_line = self.text.byte_to_line(start_byte);
+            let start_column = start_byte - self.text.line_to_byte(start_line);
+            let start_position = tree_sitter::Point::new(start_line, start_column);
+
+            let old_end_line = self.text.byte_to_line(old_end_byte);
+            let old_end_column = old_end_byte - self.text.line_to_byte(old_end_line);
+            let old_end_position = tree_sitter::Point::new(old_end_line, old_end_column);
+
+            let new_end_position = if new_end_byte < old_end_byte {
+                let deleted_slice = self.text.slice(self.text.byte_to_char(new_end_byte)..self.text.byte_to_char(old_end_byte));
+                let deleted_lines = deleted_slice.lines().count();
+                let last_line_len = deleted_slice.lines().last().map_or(0, |line| line.len_chars());
+
+                if deleted_lines == 0 {
+                    tree_sitter::Point::new(start_line, start_column + (new_end_byte - start_byte))
+                } else {
+                    tree_sitter::Point::new(
+                        start_line + deleted_lines - 1,
+                        if deleted_lines == 1 {
+                            start_column + (new_end_byte - start_byte)
+                        } else {
+                            old_end_column - last_line_len + (new_end_byte - start_byte)
+                        },
+                    )
+                }
+            } else {
+                let new_end_line = self.text.byte_to_line(new_end_byte);
+                let new_end_column = new_end_byte - self.text.line_to_byte(new_end_line);
+                tree_sitter::Point::new(new_end_line, new_end_column)
+            };
 
             if let Some(old_tree) = tree.as_mut() {
                 let edit = tree_sitter::InputEdit {
                     start_byte,
                     old_end_byte,
                     new_end_byte,
-                    start_position: tree_sitter::Point::new(0, 0),
-                    old_end_position: tree_sitter::Point::new(0, 0),
-                    new_end_position: tree_sitter::Point::new(0, 0),
+                    start_position,
+                    old_end_position,
+                    new_end_position,
                 };
+
                 old_tree.edit(&edit);
                 *tree = parser.parse(self.text.to_string(), Some(old_tree));
             } else {
@@ -112,7 +144,6 @@ impl<L: LineLayout> TextEditor<L> {
             highlight_map.clear();
             if let Some(tree) = tree.as_ref() {
                 let mut query_cursor = QueryCursor::new();
-
                 let root_node = tree.root_node();
                 let text = self.text.to_string();
                 let highlights = query_cursor.matches(&highlight_config.query, root_node, text.as_bytes());
@@ -377,7 +408,7 @@ impl<L: LineLayout> TextEditor<L> {
             self.target_column = self.get_cursor_column();
         }
 
-        self.update_tree(start, start, start + string.len(), string);
+        self.update_tree(start, start, start + string.len());
     }
 
     pub fn remove_range(&mut self, start: usize, end: usize, record: bool, store_cursor: bool, move_cursor_after: bool) {
@@ -407,7 +438,7 @@ impl<L: LineLayout> TextEditor<L> {
             self.target_column = self.get_cursor_column();
         }
 
-        self.update_tree(start, end, start, "");
+        self.update_tree(start, end, start);
     }
 
     pub fn move_cursor_to_column(&mut self, column: usize, add_selection: bool, save_column: bool) {
