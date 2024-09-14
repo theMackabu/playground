@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use server::{route, Error, HttpResponse, Request, Responder, Response, Router, Server};
+use server::{route, routes, Error, HttpResponse, Request, Responder, Response, Router, Server};
 
 #[derive(Serialize, Deserialize)]
 struct Hello {
@@ -33,12 +33,12 @@ async fn hello(_req: Request) -> Response {
 
 #[server::main]
 fn main() {
-    let mut router = Router::new();
-
-    __ROUTE_HELLO_RESULT(&mut router);
-    __ROUTE_HELLO(&mut router);
-    __ROUTE_HELLO_IMPL(&mut router);
-    __ROUTE_HELLO_RESPONSE(&mut router);
+    let router = routes! {
+        hello,
+        hello_impl,
+        hello_result,
+        hello_response
+    };
 
     Server::new("127.0.0.1", 8080).serve(router)?
 }

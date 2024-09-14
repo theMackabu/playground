@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{parse::Parse, parse::ParseStream, parse_macro_input, Expr, ExprMethodCall, ExprTry, Ident, ItemFn, LitStr, ReturnType, Signature, Token, Type};
+use syn::{parse::Parse, parse::ParseStream, parse_macro_input, punctuated::Punctuated, Expr, ExprMethodCall, ExprTry, Ident, ItemFn, ReturnType, Signature, Token, Type};
 
 struct RouteArgs {
     method: syn::Ident,
@@ -21,6 +21,14 @@ fn transform_serve_call(expr: &Expr) -> Option<quote::__private::TokenStream> {
         Expr::MethodCall(ExprMethodCall { receiver, method, args, .. }) => {
             if method.to_string() == "serve" {
                 Some(quote! { #receiver.#method(#args).await })
+            } else if method.to_string() == "service" {
+                if let Expr::Path(path) = &args[0] {
+                    let ident = &path.path.segments.last().unwrap().ident;
+                    let route_fn_ident = format_ident!("__ROUTE_{}", ident.to_string().to_uppercase());
+                    Some(quote! { #route_fn_ident(&mut #receiver); })
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -64,21 +72,6 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
             _ => new_body.push(stmt.to_token_stream()),
         }
     }
-
-    // for stmt in block.stmts.iter() {
-    //     if let syn::Stmt::Expr(Expr::MethodCall(ExprMethodCall { receiver, method, args, .. }), _) = stmt {
-    //         if method.to_string() == "serve" {
-    //             new_body.push(quote! { #receiver.#method(#args).await });
-    //         } else if method.to_string() == "service" {
-    //             let new_arg = quote! { #args() };
-    //             new_body.push(quote! { router.service(#new_arg); });
-    //         } else {
-    //             new_body.push(stmt.to_token_stream());
-    //         }
-    //     } else {
-    //         new_body.push(stmt.to_token_stream());
-    //     }
-    // }
 
     let gen = quote! {
         #(#attrs)*
@@ -139,7 +132,7 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
         #vis async fn #ident #generics(#inputs) #output #block
 
         pub fn #route_fn_ident(router: &mut ::server::Router) {
-            router.service(::server::Method::#method, #path.to_string(),
+            router.add(::server::Method::#method, #path.to_string(),
             |req: ::server::Request| Box::pin(async move {
                 #handler_body
             }));
@@ -147,4 +140,57 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     gen.into()
+}
+
+#[proc_macro]
+pub fn routes(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as RoutesInput);
+    let default_route = input.default;
+    let routes = input.routes;
+
+    let route_services = routes.iter().map(|route| {
+        let route_fn_ident = format_ident!("__ROUTE_{}", route.to_string().to_uppercase());
+        quote! {
+            #route_fn_ident(&mut router);
+        }
+    });
+
+    let expanded = if let Some(default) = default_route {
+        quote! {
+            {
+                let mut router = Router::new();
+                #(#route_services)*
+                router
+            }
+        }
+    } else {
+        quote! {
+            {
+                let mut router = Router::new();
+                #(#route_services)*
+                router
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+struct RoutesInput {
+    routes: Punctuated<Ident, Token![,]>,
+    default: Option<Ident>,
+}
+
+impl syn::parse::Parse for RoutesInput {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let routes = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
+        let default = if input.peek(Token![default]) {
+            input.parse::<Token![default]>()?;
+            let _colon: Token![:] = input.parse()?;
+            Some(input.parse()?)
+        } else {
+            None
+        };
+        Ok(RoutesInput { routes, default })
+    }
 }

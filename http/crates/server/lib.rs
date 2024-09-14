@@ -1,4 +1,4 @@
-pub use codegen::{main, route};
+pub use codegen::{main, route, routes};
 pub use tokio;
 
 use serde::Serialize;
@@ -106,7 +106,7 @@ pub struct Router {
 impl Router {
     pub fn new() -> Self { Router { routes: Vec::new() } }
 
-    pub fn service<F>(&mut self, method: Method, path: String, handler: F) -> &mut Self
+    pub fn add<F>(&mut self, method: Method, path: String, handler: F) -> &mut Self
     where
         F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
     {
