@@ -1,22 +1,10 @@
 use serde::{Deserialize, Serialize};
-use server::{route, routes, Error, HttpResponse, Json, Request, Responder, Response, Router, Server};
+use server::{route, routes, Error, HttpResponse, Json, Request, Responder, Response, Router, Server, Str};
 
 #[derive(Serialize, Deserialize)]
 struct Hello {
     name: &'static str,
     furry: bool,
-}
-
-#[route(get, "/hello/{name}")]
-async fn hello(_req: Request, name: String) -> Response {
-    let body = format!("Hello, {name}!").as_bytes().to_vec();
-    Response::ok().body(body)
-}
-
-#[route(get, "/json")]
-async fn json(_req: Request) -> Json<Hello> {
-    let body = Hello { name: "themackabu", furry: true };
-    Json(body)
 }
 
 #[route(get, "/hello/result")]
@@ -37,11 +25,14 @@ async fn hello_response(_req: Request) -> HttpResponse {
     Ok(Response::ok().body(body))
 }
 
+#[route(get, "/hello/{name}")]
+async fn hello(_req: Request, name: String) -> String { format!("Hello, {name}!") }
+
+#[route(get, "/json")]
+async fn json(_req: Request) -> Json<Hello> { Json(Hello { name: "themackabu", furry: true }) }
+
 #[route(default = true)]
-async fn not_found(_req: Request) -> Response {
-    let body = "Hello, World!".as_bytes().to_vec();
-    Response::ok().body(body)
-}
+async fn not_found(_req: Request) -> Str { "Hello, World!" }
 
 #[server::main]
 fn main() {

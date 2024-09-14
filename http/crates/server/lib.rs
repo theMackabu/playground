@@ -21,6 +21,8 @@ pub trait Responder: Send {
     fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>>;
 }
 
+pub type Str = &'static str;
+
 pub type HttpResponse = Result<Response, Error>;
 
 pub type HttpFuture = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Error>> + Send>>;
@@ -408,6 +410,7 @@ impl Responder for String {
         Box::pin(async move { Ok(Response::ok().body(self.into_bytes()).content_type(ContentType::plaintext()).into()) })
     }
 }
+
 impl Responder for Vec<u8> {
     fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
         Box::pin(async move { Ok(Response::ok().body(*self).content_type(ContentType::plaintext()).into()) })
