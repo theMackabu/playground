@@ -14,7 +14,9 @@ pub trait Responder: Send {
     fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>>;
 }
 
-pub type HttpResponse = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Error>> + Send>>;
+pub type HttpResponse = Result<Response, Error>;
+
+pub type HttpFuture = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Error>> + Send>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Method {
@@ -98,7 +100,7 @@ impl Responder for Response {
 
 #[derive(Clone)]
 pub struct Router {
-    pub routes: Vec<(Method, String, Arc<dyn Fn(Request) -> HttpResponse + Send + Sync>)>,
+    pub routes: Vec<(Method, String, Arc<dyn Fn(Request) -> HttpFuture + Send + Sync>)>,
 }
 
 impl Router {
@@ -106,7 +108,7 @@ impl Router {
 
     pub fn service<F>(&mut self, method: Method, path: String, handler: F) -> &mut Self
     where
-        F: Fn(Request) -> HttpResponse + Send + Sync + 'static,
+        F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
     {
         self.routes.push((method, path, Arc::new(handler)));
         self

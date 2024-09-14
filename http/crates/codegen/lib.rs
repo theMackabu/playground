@@ -102,19 +102,18 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
     let method = &args.method;
     let path = &args.path;
 
-    let (is_result, _) = match &output {
-        ReturnType::Default => (false, None),
-        ReturnType::Type(_, ty) => {
-            if let Type::Path(type_path) = &**ty {
-                if type_path.path.segments.last().map_or(false, |s| s.ident == "Result") {
-                    (true, Some(quote! { #ty }))
+    let is_result = match &output {
+        ReturnType::Default => false,
+        ReturnType::Type(_, ty) => match &**ty {
+            Type::Path(type_path) => {
+                if type_path.path.segments.last().map_or(false, |s| s.ident == "Result" || s.ident == "HttpResponse") {
+                    true
                 } else {
-                    (false, Some(quote! { #ty }))
+                    false
                 }
-            } else {
-                (false, Some(quote! { #ty }))
             }
-        }
+            _ => false,
+        },
     };
 
     // Ensure the function is async
@@ -126,12 +125,13 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let handler_body = if is_result {
         quote! {
-            #ident(req).await
+            match #ident(req).await {
+                Ok(responder) => Ok(Box::new(responder) as Box<dyn ::server::Responder>),
+                Err(err) => Err(err),
+            }
         }
     } else {
-        quote! {
-            Ok(#ident(req).await)
-        }
+        quote!(Ok(Box::new(#ident(req).await) as Box<dyn ::server::Responder>))
     };
 
     let gen = quote! {
