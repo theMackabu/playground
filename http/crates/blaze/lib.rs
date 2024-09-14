@@ -1,3 +1,5 @@
+use __internals_do_not_use_or_you_will_be_fired::{HttpFuture, RespFuture};
+
 pub use codegen::{main, route, routes};
 pub use http;
 pub use tokio;
@@ -8,24 +10,32 @@ mod macros;
 use header::{ContentType, TryIntoHeaderValue};
 use http::header::*;
 use serde::Serialize;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::future::Future;
-use std::net::SocketAddr;
-use std::pin::Pin;
-use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, Result as IoResult};
-use tokio::net::{TcpListener, TcpStream};
+use std::{borrow::Cow, collections::HashMap, net::SocketAddr, sync::Arc};
+
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, Result as IoResult},
+    net::{TcpListener, TcpStream},
+};
+
+pub mod prelude {
+    pub use super::{Error, HttpResponse, Method, Request, Responder, Router, Server};
+}
 
 pub trait Responder: Send {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>>;
+    fn respond(self: Box<Self>) -> RespFuture;
 }
 
 pub type Str = &'static str;
 
 pub type HttpResponse = Result<Response, Error>;
 
-pub type HttpFuture = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Error>> + Send>>;
+pub mod __internals_do_not_use_or_you_will_be_fired {
+    use super::{Error, Responder, Response};
+    use std::{future::Future, pin::Pin};
+
+    pub type RespFuture = Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>>;
+    pub type HttpFuture = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Error>> + Send>>;
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Method {
@@ -174,7 +184,7 @@ impl Default for Response {
 }
 
 impl Responder for Response {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> { Box::pin(async move { Ok(*self) }) }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(*self) }) }
 }
 
 #[derive(Clone)]
@@ -395,7 +405,7 @@ pub struct Text<'a>(pub Cow<'a, str>);
 pub struct Bytes<'a>(pub Cow<'a, [u8]>);
 
 impl<T: Serialize + Send + 'static> Responder for Json<T> {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
+    fn respond(self: Box<Self>) -> RespFuture {
         Box::pin(async move {
             let body = serde_json::to_string(&self.0)?;
             let mut response = Response::ok().body(body.into_bytes());
@@ -406,27 +416,19 @@ impl<T: Serialize + Send + 'static> Responder for Json<T> {
 }
 
 impl Responder for String {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
-        Box::pin(async move { Ok(Response::ok().body(self.into_bytes()).content_type(ContentType::plaintext()).into()) })
-    }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(Response::ok().body(self.into_bytes()).content_type(ContentType::plaintext()).into()) }) }
 }
 
 impl Responder for Vec<u8> {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
-        Box::pin(async move { Ok(Response::ok().body(*self).content_type(ContentType::plaintext()).into()) })
-    }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(Response::ok().body(*self).content_type(ContentType::plaintext()).into()) }) }
 }
 
 impl Responder for &'static str {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
-        Box::pin(async move { Ok(Response::ok().body(self.as_bytes().to_vec()).content_type(ContentType::plaintext()).into()) })
-    }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(Response::ok().body(self.as_bytes().to_vec()).content_type(ContentType::plaintext()).into()) }) }
 }
 
 impl Responder for &'static [u8] {
-    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
-        Box::pin(async move { Ok(Response::ok().body(self.to_vec()).content_type(ContentType::plaintext()).into()) })
-    }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(Response::ok().body(self.to_vec()).content_type(ContentType::plaintext()).into()) }) }
 }
 
 #[derive(Debug)]

@@ -1,5 +1,5 @@
+use blaze::{prelude::*, routes, Json, Response, Str};
 use serde::{Deserialize, Serialize};
-use server::{route, routes, Error, HttpResponse, Json, Request, Responder, Response, Router, Server, Str};
 
 #[derive(Serialize, Deserialize)]
 struct Hello {
@@ -7,34 +7,34 @@ struct Hello {
     furry: bool,
 }
 
-#[route(get, "/hello/result")]
+#[blaze::route(get, "/hello/result")]
 async fn hello_result(_req: Request) -> Result<Response, Error> {
     let body = "Hello, World! (From a Result)".as_bytes().to_vec();
     Ok(Response::ok().body(body))
 }
 
-#[route(get, "/hello/impl")]
+#[blaze::route(get, "/hello/impl")]
 async fn hello_impl(_req: Request) -> impl Responder {
     let body = "Hello, World! (From a impl)".as_bytes().to_vec();
     Response::ok().body(body)
 }
 
-#[route(get, "/hello/response")]
+#[blaze::route(get, "/hello/response")]
 async fn hello_response(_req: Request) -> HttpResponse {
     let body = "Hello, World! (From a HttpResponse)".as_bytes().to_vec();
     Ok(Response::ok().body(body))
 }
 
-#[route(get, "/hello/{name}")]
+#[blaze::route(get, "/hello/{name}")]
 async fn hello(_req: Request, name: String) -> String { format!("Hello, {name}!") }
 
-#[route(get, "/json")]
+#[blaze::route(get, "/json")]
 async fn json(_req: Request) -> Json<Hello> { Json(Hello { name: "themackabu", furry: true }) }
 
-#[route(default = true)]
+#[blaze::route(default = true)]
 async fn not_found(_req: Request) -> Str { "Hello, World!" }
 
-#[server::main]
+#[blaze::main]
 fn main() {
     let router = routes! {
         json,

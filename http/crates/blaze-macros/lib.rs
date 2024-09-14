@@ -200,14 +200,14 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote_spanned! {Span::call_site()=>
             #param_extraction
             match #function_call.await {
-                Ok(responder) => Ok(Box::new(responder) as Box<dyn ::server::Responder>),
+                Ok(responder) => Ok(Box::new(responder) as Box<dyn crate::Responder>),
                 Err(err) => Err(err),
             }
         }
     } else {
         quote_spanned! {Span::call_site()=>
             #param_extraction
-            Ok(Box::new(#function_call.await) as Box<dyn ::server::Responder>)
+            Ok(Box::new(#function_call.await) as Box<dyn crate::Responder>)
         }
     };
 
@@ -215,14 +215,14 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
         #(#attrs)*
         #vis #sig #block
 
-        pub fn #route_fn_ident(router: &mut ::server::Router) {
+        pub fn #route_fn_ident(router: &mut crate::Router) {
             if #is_default {
-                router.add_default(|req: ::server::Request| Box::pin(async move {
+                router.add_default(|req: crate::Request| Box::pin(async move {
                     #handler_body
                 }));
             } else {
-                router.add(::server::Method::#method, #path.to_string(),
-                |req: ::server::Request| Box::pin(async move {
+                router.add(crate::Method::#method, #path.to_string(),
+                |req: crate::Request| Box::pin(async move {
                     #handler_body
                 }));
             }
@@ -246,7 +246,7 @@ pub fn routes(input: TokenStream) -> TokenStream {
 
     let gen = quote! {
         {
-            let mut router = Router::new();
+            let mut router = crate::Router::new();
             #(#route_services)*
             router
         }
