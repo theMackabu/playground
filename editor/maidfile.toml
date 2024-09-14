@@ -1,6 +1,9 @@
 [project]
-name = "rewrite"
-version = "0.0.1"
+name = "meow"
+version = "0.0.2"
 
 [tasks.run]
 script = ["rm debug_output.log", "fleet run --release %{arg.1}"]
+
+[tasks.install]
+script = ["cargo install --path ."]

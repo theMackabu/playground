@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import Button from '@/ui';
 
 // Functional component with hooks
 const ExampleComponent = ({ initialCount }) => {
@@ -20,7 +21,7 @@ const ExampleComponent = ({ initialCount }) => {
       <h1>Example JSX Component</h1>
       <p>Count: {count}</p>
       <p>The count is {isEven ? 'even' : 'odd'}</p>
-      <button onClick={handleIncrement}>Increment</button>
+      <Button onClick={handleIncrement}>Increment</Button>
       {count > 5 && <p>Count is greater than 5!</p>}
       <ul>
         {['React', 'JSX', 'Hooks'].map((item, index) => (

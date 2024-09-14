@@ -6,7 +6,7 @@ use std::io::{stdout, Write};
 
 use crossterm::{
     cursor::{self, SetCursorStyle},
-    event::{DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute, queue, style,
     style::Color,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -17,17 +17,13 @@ pub struct TermLineLayoutSettings {
 }
 
 impl TermLineLayoutSettings {
-    pub fn new(tab_width: usize) -> Self {
-        Self { tab_width }
-    }
+    pub fn new(tab_width: usize) -> Self { Self { tab_width } }
 }
 
 impl LineLayout for TermLineLayoutSettings {
     type Iter<'a> = TermLineLayout<'a>;
 
-    fn layout_line<'a>(&self, line: RopeSlice<'a>) -> TermLineLayout<'a> {
-        TermLineLayout::new(line, self.tab_width)
-    }
+    fn layout_line<'a>(&self, line: RopeSlice<'a>) -> TermLineLayout<'a> { TermLineLayout::new(line, self.tab_width) }
 }
 
 pub struct TermLineLayout<'a> {
@@ -89,9 +85,7 @@ impl Char {
         }
     }
 
-    pub fn new(c: char, color: Option<(Color, Option<Attribute>)>, highlight: Highlight) -> Self {
-        Self { c, color, highlight }
-    }
+    pub fn new(c: char, color: Option<(Color, Option<Attribute>)>, highlight: Highlight) -> Self { Self { c, color, highlight } }
 }
 
 pub type TerminalBuffer = (Vec<Char>, Option<(usize, usize)>);
@@ -233,8 +227,9 @@ pub fn cleanup_terminal() {
         stdout(),
         LeaveAlternateScreen,
         DisableMouseCapture,
+        PopKeyboardEnhancementFlags,
         cursor::RestorePosition,
-        SetCursorStyle::BlinkingBlock,
+        SetCursorStyle::DefaultUserShape,
         cursor::Show,
     )
     .unwrap();

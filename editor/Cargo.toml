@@ -1,15 +1,16 @@
 [package]
 name = "meow"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 
 [dependencies]
-cfg-if = "1.0.0"
-clap = { version = "4.5.17", features = ["derive"] }
-crossterm = "0.27.0"
 ropey = "1.6.1"
-unicode-segmentation = "1.11.0"
+cfg-if = "1.0.0"
+crossterm = "0.27.0"
+const_format = "0.2.33"
 unicode-width = "0.1.13"
+unicode-segmentation = "1.11.0"
+clap = { version = "4.5.17", features = ["derive"] }
 
 # local syntaxes
 tree-sitter-html = { path = "crates/tree-sitter-html" }
