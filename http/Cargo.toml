@@ -17,11 +17,6 @@ opt-level = 3
 codegen-units = 1
 
 [patch.crates-io]
-# -- global --
-# blaze = { version = "blaze" }
-# blaze-macros = { version = "blaze-macros" }
-
-# -- local --
 blaze = { path = "crates/blaze" }
 blaze-macros = { path = "crates/blaze-macros" }
 
