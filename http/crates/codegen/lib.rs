@@ -217,7 +217,7 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
                     #handler_body
                 }));
             } else {
-                router.add(::server::Method::#method, #path.to_string(), &[#(#parameters),*],
+                router.add(::server::Method::#method, #path.to_string(),
                 |req: ::server::Request| Box::pin(async move {
                     #handler_body
                 }));

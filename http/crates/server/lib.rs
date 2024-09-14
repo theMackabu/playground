@@ -78,13 +78,13 @@ pub struct Request {
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
-    pub route_params: HashMap<String, String>,
-    pub query_params: HashMap<String, String>,
+    pub params: HashMap<String, String>,
+    pub query: HashMap<String, String>,
 }
 
 impl Request {
-    pub fn route_param(&self, name: &str) -> Option<&String> { self.route_params.get(name) }
-    pub fn query_param(&self, name: &str) -> Option<&String> { self.query_params.get(name) }
+    pub fn route_param(&self, name: &str) -> Option<&String> { self.params.get(name) }
+    pub fn query_param(&self, name: &str) -> Option<&String> { self.query.get(name) }
 }
 
 #[derive(Clone)]
@@ -121,7 +121,7 @@ pub struct Router {
 impl Router {
     pub fn new() -> Self { Router { routes: Vec::new() } }
 
-    pub fn add<F>(&mut self, method: Method, path: String, args: &[&str], handler: F) -> &mut Self
+    pub fn add<F>(&mut self, method: Method, path: String, handler: F) -> &mut Self
     where
         F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
     {
@@ -173,8 +173,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
 
     for (method, path, handler) in router.routes.iter() {
         if req.method == *method && paths_match(&req.path, path) {
-            let route_params = extract_params(&req.path, path);
-            req.route_params = route_params;
+            req.params = extract_params(&req.path, path);
 
             match handler(req.clone()).await {
                 Ok(responder) => {
@@ -299,9 +298,9 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     Ok(Request {
         method,
         headers,
-        query_params,
-        body: Vec::new(),             // For simplicity, we're not parsing the body
-        route_params: HashMap::new(), // This will be populated in handle_connection
+        query: query_params,
+        body: Vec::new(),       // For simplicity, we're not parsing the body
+        params: HashMap::new(), // This will be populated in handle_connection
         path: path.to_string(),
     })
 }
