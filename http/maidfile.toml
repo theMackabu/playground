@@ -1,0 +1,8 @@
+[project]
+name = "blaze"
+version = "0.1.3"
+
+
+[tasks]
+serve = { script = "fleet run --release" }
+publish = { script = "cargo publish --manifest-path crates/blaze/Cargo.toml --no-verify" }

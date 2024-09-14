@@ -4,6 +4,9 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-blaze = { version = "0.1.3", path = "crates/blaze" }
+blaze = { version = "0.1.3" }
 serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
+
+[workspace]
+members = ["crates/blaze"]
