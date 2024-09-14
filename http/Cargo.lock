@@ -46,7 +46,7 @@ checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
 name = "blaze"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "blaze-macros",
  "derive_more",
@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "blaze-macros"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -68,7 +68,7 @@ dependencies = [
 
 [[package]]
 name = "blaze-tests"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "blaze",
  "serde",

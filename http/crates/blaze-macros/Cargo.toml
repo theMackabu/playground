@@ -1,8 +1,9 @@
 [package]
-name = "blaze-macros"
 version.workspace = true
 license.workspace = true
 edition.workspace = true
+
+name = "blaze-macros"
 description = "macros for blaze, the framework"
 
 [lib]

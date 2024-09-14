@@ -1,8 +1,10 @@
 [package]
-name = "blaze"
 version.workspace = true
 license.workspace = true
 edition.workspace = true
+
+name = "blaze"
+readme = "../../README.md"
 description = "blazing fast http framework"
 
 [lib]
