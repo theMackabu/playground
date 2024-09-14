@@ -1,8 +1,8 @@
 [package]
 name = "blaze"
-version = "0.1.3"
-edition = "2021"
-license = "MIT"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
 description = "blazing fast http framework"
 
 [lib]
@@ -10,10 +10,10 @@ name = "blaze"
 path = "lib.rs"
 
 [dependencies]
-http = "1.1.0"
-mime = "0.3.17"
-serde_json = "1.0.128"
-tokio = { version = "1.40.0", features = ["full"] }
-serde = { version = "1.0.210", features = ["derive"] }
-codegen = { package = "blaze-macros", version = "0.1.3", path = "../blaze-macros" }
-derive_more = { version = "1.0.0", features = ["display", "error", "from", "deref", "deref_mut"] }
+http = { workspace = true }
+mime = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+derive_more = { workspace = true }
+blaze-macros = { workspace = true }

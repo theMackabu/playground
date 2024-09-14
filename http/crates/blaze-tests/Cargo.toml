@@ -1,0 +1,14 @@
+[package]
+name = "blaze-tests"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "blaze_tests"
+path = "test.rs"
+
+[dependencies]
+blaze = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }

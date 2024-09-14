@@ -1,6 +1,6 @@
 use __internals_do_not_use_or_you_will_be_fired::{HttpFuture, RespFuture};
 
-pub use codegen::{main, route, routes};
+pub use blaze_macros::{main, route, routes};
 pub use http;
 pub use tokio;
 
