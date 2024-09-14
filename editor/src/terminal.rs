@@ -225,10 +225,10 @@ pub fn setup_terminal(disable_mouse_interaction: bool) {
 pub fn cleanup_terminal() {
     execute!(
         stdout(),
-        LeaveAlternateScreen,
         DisableMouseCapture,
         PopKeyboardEnhancementFlags,
         cursor::RestorePosition,
+        LeaveAlternateScreen,
         SetCursorStyle::DefaultUserShape,
         cursor::Show,
     )
