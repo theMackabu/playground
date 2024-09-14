@@ -1,13 +1,20 @@
 pub use codegen::{main, route, routes};
+pub use http;
 pub use tokio;
 
+pub mod header;
+mod macros;
+
+use header::{ContentType, TryIntoHeaderValue};
+use http::header::*;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, Result as IoResult};
 use tokio::net::{TcpListener, TcpStream};
 
 pub trait Responder: Send {
@@ -76,7 +83,7 @@ impl From<u16> for StatusCode {
 pub struct Request {
     pub method: Method,
     pub path: String,
-    pub headers: HashMap<String, String>,
+    pub headers: HeaderMap,
     pub body: Vec<u8>,
     pub params: HashMap<String, String>,
     pub query: HashMap<String, String>,
@@ -90,23 +97,78 @@ impl Request {
 #[derive(Clone)]
 pub struct Response {
     pub status: StatusCode,
-    pub headers: HashMap<String, String>,
+    pub headers: HeaderMap,
     pub body: Vec<u8>,
 }
 
 impl Response {
-    pub fn new(status: StatusCode, body: Vec<u8>) -> Self {
-        let mut headers = HashMap::new();
-        headers.insert("Content-Type".to_string(), "text/plain".to_string());
-        Response { status, headers, body }
+    fn new() -> Self {
+        Response {
+            status: StatusCode::Ok,
+            headers: HeaderMap::new(),
+            body: Vec::new(),
+        }
     }
 
-    pub fn json<T: Serialize>(status: StatusCode, value: T) -> Result<Self, serde_json::Error> {
-        let body = serde_json::to_vec(&value)?;
-        let mut response = Response::new(status, body);
-        response.headers.insert("Content-Type".to_string(), "application/json".to_string());
-        Ok(response)
+    pub fn ok() -> Self { Self::new() }
+
+    pub fn status(mut self, status: StatusCode) -> Self {
+        self.status = status;
+        self
     }
+
+    pub fn content_type<V>(&mut self, value: V) -> &mut Self
+    where
+        V: TryIntoHeaderValue,
+    {
+        match value.try_into_value() {
+            Ok(value) => {
+                self.headers.insert(CONTENT_TYPE, value);
+            }
+            // Err(err) => self.error = Some(err.into()),
+            Err(_) => self.status = StatusCode::from(500),
+        };
+        self
+    }
+
+    pub fn insert_header(mut self, header: (HeaderName, HeaderValue)) -> Self {
+        self.headers.insert(header.0, header.1);
+        self
+    }
+
+    pub fn body(mut self, body: impl Into<Vec<u8>>) -> Self {
+        self.body = body.into();
+        self
+    }
+
+    pub fn json<T: Serialize>(mut self, value: &T) -> Result<Self, serde_json::Error> {
+        let body = serde_json::to_vec(value)?;
+        self.content_type(ContentType::json());
+        self.body = body;
+
+        Ok(self)
+    }
+
+    pub async fn write_headers<W: AsyncWriteExt + Unpin>(&self, stream: &mut W) -> IoResult<()> {
+        for (key, value) in self.headers.iter() {
+            let header_name = key.as_str();
+            let header_value = value
+                .to_str()
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Invalid header value: {}", e)))?;
+
+            let header = format!("{}: {}\r\n", header_name, header_value);
+            stream.write_all(header.as_bytes()).await?;
+        }
+        Ok(())
+    }
+}
+
+impl From<&mut Response> for Response {
+    fn from(response: &mut Response) -> Self { std::mem::replace(response, Response::default()) }
+}
+
+impl Default for Response {
+    fn default() -> Self { Self::new() }
 }
 
 impl Responder for Response {
@@ -169,7 +231,11 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     let n = stream.read(&mut buffer).await?;
     let mut req = parse_request(&buffer[..n])?;
 
-    let mut response = Response::new(StatusCode::NotFound, b"Not Found".to_vec());
+    let mut response = Response {
+        status: StatusCode::NotFound,
+        headers: HeaderMap::new(),
+        body: b"Not Found".to_vec(),
+    };
 
     for (method, path, handler) in router.routes.iter() {
         if req.method == *method && paths_match(&req.path, path) {
@@ -181,7 +247,12 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
                     break;
                 }
                 Err(e) => {
-                    response = Response::new(StatusCode::InternalServerError, format!("Internal Server Error: {}", e).into_bytes());
+                    response = Response {
+                        status: StatusCode::InternalServerError,
+                        headers: HeaderMap::new(),
+                        body: format!("Internal Server Error: {}", e).into_bytes(),
+                    };
+
                     break;
                 }
             }
@@ -197,7 +268,12 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
                         break;
                     }
                     Err(e) => {
-                        response = Response::new(StatusCode::InternalServerError, format!("Internal Server Error: {}", e).into_bytes());
+                        response = Response {
+                            status: StatusCode::InternalServerError,
+                            headers: HeaderMap::new(),
+                            body: format!("Internal Server Error: {}", e).into_bytes(),
+                        };
+
                         break;
                     }
                 }
@@ -211,12 +287,9 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
         response.status.reason_phrase(),
         response.body.len()
     );
-    stream.write_all(response_string.as_bytes()).await?;
 
-    for (key, value) in response.headers.iter() {
-        let header = format!("{}: {}\r\n", key, value);
-        stream.write_all(header.as_bytes()).await?;
-    }
+    stream.write_all(response_string.as_bytes()).await?;
+    response.write_headers(&mut stream).await?;
 
     stream.write_all(b"\r\n").await?;
     stream.write_all(&response.body).await?;
@@ -267,6 +340,24 @@ fn parse_query_string(query: &str) -> HashMap<String, String> {
         .collect()
 }
 
+fn parse_headers<'a, I>(lines: I) -> Result<HeaderMap, Error>
+where
+    I: Iterator<Item = &'a str>,
+{
+    let mut headers = HeaderMap::new();
+    for line in lines {
+        if line.is_empty() {
+            break;
+        }
+        if let Some((key, value)) = line.split_once(':') {
+            let header_name = HeaderName::from_bytes(key.trim().as_bytes()).map_err(|e| Error(format!("Invalid header name: {}", e)))?;
+            let header_value = HeaderValue::from_str(value.trim()).map_err(|e| Error(format!("Invalid header value: {}", e)))?;
+            headers.insert(header_name, header_value);
+        }
+    }
+    Ok(headers)
+}
+
 fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     let request_str = String::from_utf8_lossy(buffer);
     let mut lines = request_str.lines();
@@ -285,19 +376,9 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     let (path, query) = full_path.split_once('?').unwrap_or((full_path, ""));
     let query_params = parse_query_string(query);
 
-    let mut headers = HashMap::new();
-    for line in lines {
-        if line.is_empty() {
-            break;
-        }
-        if let Some((key, value)) = line.split_once(':') {
-            headers.insert(key.trim().to_string(), value.trim().to_string());
-        }
-    }
-
     Ok(Request {
         method,
-        headers,
+        headers: parse_headers(lines)?,
         query: query_params,
         body: Vec::new(),       // For simplicity, we're not parsing the body
         params: HashMap::new(), // This will be populated in handle_connection
@@ -307,14 +388,41 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
 
 pub struct Json<T>(pub T);
 
+pub struct Text<'a>(pub Cow<'a, str>);
+
+pub struct Bytes<'a>(pub Cow<'a, [u8]>);
+
 impl<T: Serialize + Send + 'static> Responder for Json<T> {
     fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
         Box::pin(async move {
             let body = serde_json::to_string(&self.0)?;
-            let mut response = Response::new(StatusCode::Ok, body.into_bytes());
-            response.headers.insert("Content-Type".to_string(), "application/json".to_string());
+            let mut response = Response::ok().body(body.into_bytes());
+            response.content_type(ContentType::json());
             Ok(response)
         })
+    }
+}
+
+impl Responder for String {
+    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
+        Box::pin(async move { Ok(Response::ok().body(self.into_bytes()).content_type(ContentType::plaintext()).into()) })
+    }
+}
+impl Responder for Vec<u8> {
+    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
+        Box::pin(async move { Ok(Response::ok().body(*self).content_type(ContentType::plaintext()).into()) })
+    }
+}
+
+impl Responder for &'static str {
+    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
+        Box::pin(async move { Ok(Response::ok().body(self.as_bytes().to_vec()).content_type(ContentType::plaintext()).into()) })
+    }
+}
+
+impl Responder for &'static [u8] {
+    fn respond(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>> {
+        Box::pin(async move { Ok(Response::ok().body(self.to_vec()).content_type(ContentType::plaintext()).into()) })
     }
 }
 
@@ -337,4 +445,8 @@ impl From<serde_json::Error> for Error {
 
 impl From<Error> for std::io::Error {
     fn from(err: Error) -> Self { std::io::Error::new(std::io::ErrorKind::Other, err.0) }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(err: std::string::FromUtf8Error) -> Self { Error(err.to_string()) }
 }

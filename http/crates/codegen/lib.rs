@@ -137,15 +137,19 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RouteArgs);
+
     let ItemFn { attrs, vis, sig, block } = parse_macro_input!(item as ItemFn);
-    let Signature { ident, generics, inputs, output, .. } = sig.clone();
+    let Signature { ident, inputs, output, .. } = sig.clone();
+
     let method = &args.method;
     let path = &args.path;
     let is_default = &args.default;
+
     let is_result = match &output {
         ReturnType::Default => false,
         ReturnType::Type(_, ty) => matches!(&**ty, Type::Path(type_path) if type_path.path.segments.last().map_or(false, |s| s.ident == "Result" || s.ident == "HttpResponse")),
     };
+
     let parameters: Vec<_> = path
         .value()
         .split('/')

@@ -58,7 +58,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "codegen"
-version = "0.1.3"
+version = "0.0.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -103,15 +103,6 @@ name = "hermit-abi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
-
-[[package]]
-name = "http"
-version = "0.1.0"
-dependencies = [
- "serde",
- "server",
- "tokio",
-]
 
 [[package]]
 name = "http"
@@ -296,11 +287,11 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.3"
+version = "0.0.1"
 dependencies = [
  "codegen",
  "derive_more",
- "http 1.1.0",
+ "http",
  "mime",
  "serde",
  "serde_json",
