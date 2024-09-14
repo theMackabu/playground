@@ -78,6 +78,13 @@ pub struct Request {
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
+    pub route_params: HashMap<String, String>,
+    pub query_params: HashMap<String, String>,
+}
+
+impl Request {
+    pub fn route_param(&self, name: &str) -> Option<&String> { self.route_params.get(name) }
+    pub fn query_param(&self, name: &str) -> Option<&String> { self.query_params.get(name) }
 }
 
 #[derive(Clone)]
@@ -93,6 +100,13 @@ impl Response {
         headers.insert("Content-Type".to_string(), "text/plain".to_string());
         Response { status, headers, body }
     }
+
+    pub fn json<T: Serialize>(status: StatusCode, value: T) -> Result<Self, serde_json::Error> {
+        let body = serde_json::to_vec(&value)?;
+        let mut response = Response::new(status, body);
+        response.headers.insert("Content-Type".to_string(), "application/json".to_string());
+        Ok(response)
+    }
 }
 
 impl Responder for Response {
@@ -107,7 +121,7 @@ pub struct Router {
 impl Router {
     pub fn new() -> Self { Router { routes: Vec::new() } }
 
-    pub fn add<F>(&mut self, method: Method, path: String, handler: F) -> &mut Self
+    pub fn add<F>(&mut self, method: Method, path: String, args: &[&str], handler: F) -> &mut Self
     where
         F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
     {
@@ -153,12 +167,15 @@ impl Server {
 async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), Error> {
     let mut buffer = [0; 1024];
     let n = stream.read(&mut buffer).await?;
-    let req = parse_request(&buffer[..n])?;
+    let mut req = parse_request(&buffer[..n])?;
 
     let mut response = Response::new(StatusCode::NotFound, b"Not Found".to_vec());
 
     for (method, path, handler) in router.routes.iter() {
-        if req.method == *method && req.path == *path {
+        if req.method == *method && paths_match(&req.path, path) {
+            let route_params = extract_params(&req.path, path);
+            req.route_params = route_params;
+
             match handler(req.clone()).await {
                 Ok(responder) => {
                     response = responder.respond().await?;
@@ -167,6 +184,23 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
                 Err(e) => {
                     response = Response::new(StatusCode::InternalServerError, format!("Internal Server Error: {}", e).into_bytes());
                     break;
+                }
+            }
+        }
+    }
+
+    if response.status == StatusCode::NotFound {
+        for (method, _, handler) in router.routes.iter() {
+            if *method == Method::ALL {
+                match handler(req.clone()).await {
+                    Ok(responder) => {
+                        response = responder.respond().await?;
+                        break;
+                    }
+                    Err(e) => {
+                        response = Response::new(StatusCode::InternalServerError, format!("Internal Server Error: {}", e).into_bytes());
+                        break;
+                    }
                 }
             }
         }
@@ -191,11 +225,55 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     Ok(())
 }
 
+fn paths_match(request_path: &str, route_path: &str) -> bool {
+    let req_segments: Vec<&str> = request_path.split('/').collect();
+    let route_segments: Vec<&str> = route_path.split('/').collect();
+
+    if req_segments.len() != route_segments.len() {
+        return false;
+    }
+
+    for (req_seg, route_seg) in req_segments.iter().zip(route_segments.iter()) {
+        if !route_seg.starts_with('{') && req_seg != route_seg {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn extract_params(request_path: &str, route_path: &str) -> HashMap<String, String> {
+    let mut params = HashMap::new();
+    let req_segments: Vec<&str> = request_path.split('/').collect();
+    let route_segments: Vec<&str> = route_path.split('/').collect();
+
+    for (req_seg, route_seg) in req_segments.iter().zip(route_segments.iter()) {
+        if route_seg.starts_with('{') && route_seg.ends_with('}') {
+            let param_name = &route_seg[1..route_seg.len() - 1];
+            params.insert(param_name.to_string(), req_seg.to_string());
+        }
+    }
+
+    params
+}
+
+fn parse_query_string(query: &str) -> HashMap<String, String> {
+    query
+        .split('&')
+        .filter(|s| !s.is_empty())
+        .filter_map(|s| {
+            let mut parts = s.splitn(2, '=');
+            Some((parts.next()?.to_string(), parts.next().unwrap_or("").to_string()))
+        })
+        .collect()
+}
+
 fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     let request_str = String::from_utf8_lossy(buffer);
     let mut lines = request_str.lines();
     let first_line = lines.next().ok_or_else(|| Error("Invalid request".into()))?;
     let mut parts = first_line.split_whitespace();
+
     let method = match parts.next() {
         Some("GET") => Method::GET,
         Some("POST") => Method::POST,
@@ -203,7 +281,10 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
         Some("DELETE") => Method::DELETE,
         _ => return Err(Error("Invalid method".into())),
     };
-    let path = parts.next().ok_or_else(|| Error("Invalid path".into()))?.to_string();
+
+    let full_path = parts.next().ok_or_else(|| Error("Invalid path".into()))?;
+    let (path, query) = full_path.split_once('?').unwrap_or((full_path, ""));
+    let query_params = parse_query_string(query);
 
     let mut headers = HashMap::new();
     for line in lines {
@@ -217,9 +298,11 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
 
     Ok(Request {
         method,
-        path,
         headers,
-        body: Vec::new(), // For simplicity, we're not parsing the body
+        query_params,
+        body: Vec::new(),             // For simplicity, we're not parsing the body
+        route_params: HashMap::new(), // This will be populated in handle_connection
+        path: path.to_string(),
     })
 }
 

@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use proc_macro2::Span;
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 
 use syn::{
     parse::Parse,
@@ -7,7 +8,7 @@ use syn::{
     parse_macro_input,
     punctuated::Punctuated,
     token::{Comma, Eq},
-    Expr, ExprMethodCall, ExprTry, Ident, ItemFn, ReturnType, Signature, Type,
+    Expr, ExprMethodCall, ExprTry, Ident, ItemFn, Pat, ReturnType, Signature, Type,
 };
 
 struct RouteArgs {
@@ -137,53 +138,86 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RouteArgs);
     let ItemFn { attrs, vis, sig, block } = parse_macro_input!(item as ItemFn);
-    let Signature { ident, generics, inputs, output, .. } = sig.to_owned();
-
+    let Signature { ident, generics, inputs, output, .. } = sig.clone();
     let method = &args.method;
     let path = &args.path;
     let is_default = &args.default;
-
     let is_result = match &output {
         ReturnType::Default => false,
-        ReturnType::Type(_, ty) => match &**ty {
-            Type::Path(type_path) => {
-                if type_path.path.segments.last().map_or(false, |s| s.ident == "Result" || s.ident == "HttpResponse") {
-                    true
-                } else {
-                    false
-                }
-            }
-            _ => false,
-        },
+        ReturnType::Type(_, ty) => matches!(&**ty, Type::Path(type_path) if type_path.path.segments.last().map_or(false, |s| s.ident == "Result" || s.ident == "HttpResponse")),
     };
+    let parameters: Vec<_> = path
+        .value()
+        .split('/')
+        .filter_map(|segment| {
+            if segment.starts_with('{') && segment.ends_with('}') {
+                Some(segment[1..segment.len() - 1].to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    // Ensure the function is async
+    if inputs.len() != parameters.len() + 1 {
+        return syn::Error::new_spanned(sig, format!("Route handler must have {} arguments", parameters.len() + 1))
+            .to_compile_error()
+            .into();
+    }
+
     if sig.asyncness.is_none() {
         return syn::Error::new_spanned(sig, "Route handler must be async").to_compile_error().into();
     }
 
-    let route_fn_ident = format_ident!("__ROUTE_{}", ident.to_string().to_uppercase());
+    let route_fn_ident = quote::format_ident!("__ROUTE_{}", ident.to_string().to_uppercase());
+
+    // Generate parameter extraction
+    let mut param_extractions = Vec::new();
+    let mut function_args = vec![quote!(req.clone())];
+    for (_, input) in inputs.iter().enumerate().skip(1) {
+        if let syn::FnArg::Typed(pat_type) = input {
+            if let Pat::Ident(pat_ident) = &*pat_type.pat {
+                let param_name = &pat_ident.ident;
+                let param_str = param_name.to_string();
+                param_extractions.push(quote! {
+                    let #param_name = req.route_param(#param_str)
+                        .or_else(|| req.query_param(#param_str))
+                        .cloned()
+                        .unwrap_or_default();
+                });
+                function_args.push(quote!(#param_name));
+            }
+        }
+    }
+
+    let param_extraction = quote! { #(#param_extractions)* };
+    let function_call = quote! { #ident(#(#function_args),*) };
 
     let handler_body = if is_result {
-        quote! {
-            match #ident(req).await {
+        quote_spanned! {Span::call_site()=>
+            #param_extraction
+            match #function_call.await {
                 Ok(responder) => Ok(Box::new(responder) as Box<dyn ::server::Responder>),
                 Err(err) => Err(err),
             }
         }
     } else {
-        quote!(Ok(Box::new(#ident(req).await) as Box<dyn ::server::Responder>))
+        quote_spanned! {Span::call_site()=>
+            #param_extraction
+            Ok(Box::new(#function_call.await) as Box<dyn ::server::Responder>)
+        }
     };
 
     let gen = quote! {
         #(#attrs)*
-        #vis async fn #ident #generics(#inputs) #output #block
+        #vis #sig #block
 
         pub fn #route_fn_ident(router: &mut ::server::Router) {
             if #is_default {
-                router.add_default(|req: ::server::Request| Box::pin(async move { #handler_body }));
+                router.add_default(|req: ::server::Request| Box::pin(async move {
+                    #handler_body
+                }));
             } else {
-                router.add(::server::Method::#method, #path.to_string(),
+                router.add(::server::Method::#method, #path.to_string(), &[#(#parameters),*],
                 |req: ::server::Request| Box::pin(async move {
                     #handler_body
                 }));

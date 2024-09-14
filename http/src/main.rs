@@ -1,10 +1,22 @@
 use serde::{Deserialize, Serialize};
-use server::{route, routes, Error, HttpResponse, Request, Responder, Response, Router, Server};
+use server::{route, routes, Error, HttpResponse, Json, Request, Responder, Response, Router, Server};
 
 #[derive(Serialize, Deserialize)]
 struct Hello {
-    name: String,
-    age: i64,
+    name: &'static str,
+    furry: bool,
+}
+
+#[route(get, "/hello/{name}")]
+async fn hello(_req: Request, name: String) -> Response {
+    let body = format!("Hello, {name}!").as_bytes().to_vec();
+    Response::new(200.into(), body)
+}
+
+#[route(get, "/json")]
+async fn json(_req: Request) -> Json<Hello> {
+    let body = Hello { name: "themackabu", furry: true };
+    Json(body)
 }
 
 #[route(get, "/hello/result")]
@@ -25,14 +37,8 @@ async fn hello_response(_req: Request) -> HttpResponse {
     Ok(Response::new(200.into(), body))
 }
 
-#[route(get, "/hello")]
-async fn hello(_req: Request) -> Response {
-    let body = "Hello, World!".as_bytes().to_vec();
-    Response::new(200.into(), body)
-}
-
 #[route(default = true)]
-async fn default(_req: Request) -> Response {
+async fn not_found(_req: Request) -> Response {
     let body = "Hello, World!".as_bytes().to_vec();
     Response::new(200.into(), body)
 }
@@ -40,10 +46,12 @@ async fn default(_req: Request) -> Response {
 #[server::main]
 fn main() {
     let router = routes! {
+        json,
         hello,
         hello_impl,
         hello_result,
-        hello_response
+        hello_response,
+        not_found,
     };
 
     Server::new("127.0.0.1", 8080).serve(router)?
