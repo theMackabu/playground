@@ -2,6 +2,8 @@
 name = "blaze-macros"
 version = "0.1.3"
 edition = "2021"
+license = "MIT"
+description = "macros for blaze, the framework"
 
 [lib]
 name = "blaze_macros"
