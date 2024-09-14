@@ -20,6 +20,7 @@ pub type HttpFuture = Pin<Box<dyn Future<Output = Result<Box<dyn Responder>, Err
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Method {
+    ALL,
     GET,
     POST,
     PUT,
@@ -111,6 +112,14 @@ impl Router {
         F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
     {
         self.routes.push((method, path, Arc::new(handler)));
+        self
+    }
+
+    pub fn add_default<F>(&mut self, handler: F) -> &mut Self
+    where
+        F: Fn(Request) -> HttpFuture + Send + Sync + 'static,
+    {
+        self.routes.push((Method::ALL, String::default(), Arc::new(handler)));
         self
     }
 }

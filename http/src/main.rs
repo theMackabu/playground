@@ -7,26 +7,32 @@ struct Hello {
     age: i64,
 }
 
-#[route(GET, "/hello/result")]
+#[route(get, "/hello/result")]
 async fn hello_result(_req: Request) -> Result<Response, Error> {
     let body = "Hello, World! (From a Result)".as_bytes().to_vec();
     Ok(Response::new(200.into(), body))
 }
 
-#[route(GET, "/hello/impl")]
+#[route(get, "/hello/impl")]
 async fn hello_impl(_req: Request) -> impl Responder {
     let body = "Hello, World! (From a impl)".as_bytes().to_vec();
     Response::new(200.into(), body)
 }
 
-#[route(GET, "/hello/response")]
+#[route(get, "/hello/response")]
 async fn hello_response(_req: Request) -> HttpResponse {
     let body = "Hello, World! (From a HttpResponse)".as_bytes().to_vec();
     Ok(Response::new(200.into(), body))
 }
 
-#[route(GET, "/hello")]
+#[route(get, "/hello")]
 async fn hello(_req: Request) -> Response {
+    let body = "Hello, World!".as_bytes().to_vec();
+    Response::new(200.into(), body)
+}
+
+#[route(default = true)]
+async fn default(_req: Request) -> Response {
     let body = "Hello, World!".as_bytes().to_vec();
     Response::new(200.into(), body)
 }

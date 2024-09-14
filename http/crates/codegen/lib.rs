@@ -1,18 +1,64 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{parse::Parse, parse::ParseStream, parse_macro_input, punctuated::Punctuated, Expr, ExprMethodCall, ExprTry, Ident, ItemFn, ReturnType, Signature, Token, Type};
+
+use syn::{
+    parse::Parse,
+    parse::ParseStream,
+    parse_macro_input,
+    punctuated::Punctuated,
+    token::{Comma, Eq},
+    Expr, ExprMethodCall, ExprTry, Ident, ItemFn, ReturnType, Signature, Type,
+};
 
 struct RouteArgs {
     method: syn::Ident,
     path: syn::LitStr,
+    default: syn::LitBool,
+}
+
+struct RoutesInput {
+    routes: Punctuated<Ident, Comma>,
+}
+
+impl Parse for RoutesInput {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let routes = Punctuated::<Ident, Comma>::parse_terminated(input)?;
+        Ok(RoutesInput { routes })
+    }
 }
 
 impl Parse for RouteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let method = input.parse()?;
-        input.parse::<Token![,]>()?;
-        let path = input.parse()?;
-        Ok(RouteArgs { method, path })
+        let mut method: Option<syn::Ident> = None;
+        let mut path: Option<syn::LitStr> = None;
+        let mut default: syn::LitBool = syn::LitBool::new(false, input.span());
+
+        while !input.is_empty() {
+            if input.peek(syn::Ident) && input.peek2(Eq) {
+                let ident: syn::Ident = input.parse()?;
+                if ident == "default" {
+                    input.parse::<Eq>()?;
+                    default = input.parse()?;
+                }
+            } else if method.is_none() && input.peek(syn::Ident) {
+                let ident: syn::Ident = input.parse()?;
+                let method_str = ident.to_string().to_uppercase();
+                method = Some(syn::Ident::new(&method_str, ident.span()));
+            } else if path.is_none() && input.peek(syn::LitStr) {
+                path = Some(input.parse()?);
+            }
+
+            if input.peek(Comma) {
+                input.parse::<Comma>()?;
+            } else {
+                break;
+            }
+        }
+
+        let method = method.unwrap_or_else(|| syn::Ident::new("ALL", input.span()));
+        let path = path.unwrap_or_else(|| syn::LitStr::new("/", input.span()));
+
+        Ok(RouteArgs { method, path, default })
     }
 }
 
@@ -92,8 +138,10 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RouteArgs);
     let ItemFn { attrs, vis, sig, block } = parse_macro_input!(item as ItemFn);
     let Signature { ident, generics, inputs, output, .. } = sig.to_owned();
+
     let method = &args.method;
     let path = &args.path;
+    let is_default = &args.default;
 
     let is_result = match &output {
         ReturnType::Default => false,
@@ -132,10 +180,14 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
         #vis async fn #ident #generics(#inputs) #output #block
 
         pub fn #route_fn_ident(router: &mut ::server::Router) {
-            router.add(::server::Method::#method, #path.to_string(),
-            |req: ::server::Request| Box::pin(async move {
-                #handler_body
-            }));
+            if #is_default {
+                router.add_default(|req: ::server::Request| Box::pin(async move { #handler_body }));
+            } else {
+                router.add(::server::Method::#method, #path.to_string(),
+                |req: ::server::Request| Box::pin(async move {
+                    #handler_body
+                }));
+            }
         }
     };
 
@@ -145,7 +197,6 @@ pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn routes(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as RoutesInput);
-    let default_route = input.default;
     let routes = input.routes;
 
     let route_services = routes.iter().map(|route| {
@@ -155,42 +206,13 @@ pub fn routes(input: TokenStream) -> TokenStream {
         }
     });
 
-    let expanded = if let Some(default) = default_route {
-        quote! {
-            {
-                let mut router = Router::new();
-                #(#route_services)*
-                router
-            }
-        }
-    } else {
-        quote! {
-            {
-                let mut router = Router::new();
-                #(#route_services)*
-                router
-            }
+    let gen = quote! {
+        {
+            let mut router = Router::new();
+            #(#route_services)*
+            router
         }
     };
 
-    TokenStream::from(expanded)
-}
-
-struct RoutesInput {
-    routes: Punctuated<Ident, Token![,]>,
-    default: Option<Ident>,
-}
-
-impl syn::parse::Parse for RoutesInput {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let routes = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
-        let default = if input.peek(Token![default]) {
-            input.parse::<Token![default]>()?;
-            let _colon: Token![:] = input.parse()?;
-            Some(input.parse()?)
-        } else {
-            None
-        };
-        Ok(RoutesInput { routes, default })
-    }
+    gen.into()
 }
