@@ -11,20 +11,27 @@
 
 To use mini-tokio in your Rust project:
 
-1. Create a new `MiniTokio` instance
-2. Spawn tasks using the `spawn` function
-3. Run the runtime using the `run` method
+1. Create a new `Runtime` instance
+2. Spawn tasks using the `block_on` function
+3. Or use the mini_tokio::main attribute
 
-Example:
+Examples:
 
 ```rust
-let mini_tokio = MiniTokio::new();
+use mini_tokio::Runtime;
 
-mini_tokio.spawn(async {
-	 // Your async code here
+let rt = Runtime::new();
+
+mini_tokio.block_on(async {
+   // Your async code here
 });
+```
 
-mini_tokio.run();
+```rust
+#[mini_tokio::main]
+async fn main() {
+   // Your async code here
+}
 ```
 
 ## Note
