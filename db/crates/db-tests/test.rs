@@ -1,13 +1,15 @@
-use db_proto::DB;
-use tokio::io::Result;
+use db_proto::{clients::Client, Result, DEFAULT_PORT};
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let mut db = DB::open().await?;
+pub async fn main() -> Result<()> {
+    let mut client = Client::connect(&format!("127.0.0.1:{}", DEFAULT_PORT)).await?;
 
-    db.set("beep", "boop").await?;
+    client.set("cat", "meow".into()).await?;
+    let result = client.get("cat").await?;
 
-    println!("{:?}", db.get("beep").await?);
-
-    Ok(())
+    Ok(println!(
+        "got value from the server; success={:?}, value = {}",
+        result.is_some(),
+        String::from_utf8(result.unwrap().to_vec())?
+    ))
 }

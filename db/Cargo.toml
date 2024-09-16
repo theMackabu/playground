@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-	# "crates/db-cli",
+	"crates/db-cli",
 	"crates/db-proto",
-	# "crates/db-server",
+	"crates/db-server",
 	"crates/db-tests",
 ]
 
@@ -19,11 +19,20 @@ codegen-units = 1
 
 [patch.crates-io]
 db-proto = { path = "crates/db-proto" }
-# db-server = { path = "crates/db-server" }
+db-server = { path = "crates/db-server" }
 
 [workspace.dependencies]
+atoi = "2.0.0"
+bytes = "1.7.1"
 db-proto = "0.0.1"
+tracing = "0.1.40"
+db-server = "0.0.1"
 parking_lot = "0.12.3"
+async-stream = "0.3.0"
+tokio-stream = "0.1.16"
+tracing-bunyan-formatter = "0.3.9"
 
-serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
+clap = { version = "4.5.17", features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

@@ -3,18 +3,15 @@ version.workspace = true
 license.workspace = true
 edition.workspace = true
 
-name = "db-proto"
+name = "db-server"
 # readme = "../../README.md"
 description = ""
 
 [lib]
-name = "db_proto"
-path = "lib.rs"
+name = "db_server"
+path = "server.rs"
 
 [dependencies]
-atoi.workspace = true
-bytes.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-async-stream.workspace = true
-tokio-stream.workspace = true
+db-proto.workspace = true

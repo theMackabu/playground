@@ -1,0 +1,27 @@
+[package]
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+
+name = "db"
+# readme = "../../README.md"
+description = ""
+
+[[bin]]
+name = "db_client"
+path = "client.rs"
+
+[[bin]]
+name = "db_spawn"
+path = "server.rs"
+
+[dependencies]
+clap.workspace = true
+bytes.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+db-proto.workspace = true
+db-server.workspace = true
+parking_lot.workspace = true
+tracing-subscriber.workspace = true
+tracing-bunyan-formatter.workspace = true
