@@ -1,0 +1,8 @@
+# ignore all C source files
+*.c linguist-detectable=false
+*.h linguist-detectable=false
+
+# ignore C object files and libraries
+*.o linguist-detectable=false
+*.a linguist-detectable=false
+*.so linguist-detectable=false
