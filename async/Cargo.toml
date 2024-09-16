@@ -1,0 +1,14 @@
+[package]
+name = "mini-tokio"
+version = "0.1.1"
+license = "MIT"
+edition = "2021"
+description = "basic asynchronous rust executor"
+
+[lib]
+name = "mini_tokio"
+path = "async.rs"
+
+[dependencies]
+crossbeam = "0.8.4"
+futures = "0.3.30"
