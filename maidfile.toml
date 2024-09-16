@@ -7,11 +7,11 @@ flags = "-O -C codegen-units=1"
 name = "playground"
 
 [tasks.clean]
-script = ["rm -rf target", "mkdir target"]
+script = ["rm -rf %{arg.1}/target", "mkdir %{arg.1}/target"]
 
 [tasks.run]
-script = ["maid build -q %{arg.1}", "./%{env.bin}/%{arg.1}"]
+script = ["maid build -q %{arg.1}", "./%{arg.1}/%{env.bin}/bin"]
 
 [tasks.build]
 depends = ["clean"]
-script = ["rustc %{arg.1}/%{env.entry} %{env.flags} -o %{env.bin}/%{arg.1}"]
+script = ["rustc %{arg.1}/%{env.entry} %{env.flags} -o %{arg.1}/%{env.bin}/bin"]
