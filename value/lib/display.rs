@@ -65,9 +65,9 @@ struct StringFormatter;
 impl ValueFormatter for StringFormatter {
     fn format(&self, value: &dyn std::any::Any, f: &mut Formatter) -> fmt::Result {
         if let Some(s) = value.downcast_ref::<String>() {
-            write!(f, "\"{}\"", s)
+            write!(f, "{s}")
         } else if let Some(s) = value.downcast_ref::<&'static str>() {
-            write!(f, "\"{}\"", s)
+            write!(f, "{s}")
         } else {
             Err(fmt::Error)
         }

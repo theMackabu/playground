@@ -1,6 +1,6 @@
 [package]
 name = "dare"
-version = "0.0.1"
+version = "0.0.2"
 license = "MIT"
 edition = "2021"
 description = "daring flexible data representation"

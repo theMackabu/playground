@@ -183,8 +183,8 @@ mod tests {
         assert_eq!(format!("{}", Value::Bool(true)), "true");
         assert_eq!(format!("{}", Value::Float(3.14)), "3.14");
         assert_eq!(format!("{}", Value::Number(42)), "42");
-        assert_eq!(format!("{}", Value::String("hello".to_string())), "\"hello\"");
-        assert_eq!(format!("{}", Value::Static("static")), "\"static\"");
+        assert_eq!(format!("{}", Value::String("hello".to_string())), "hello");
+        assert_eq!(format!("{}", Value::Static("static")), "static");
         assert_eq!(format!("{}", Value::Array(vec![Value::Null])), "[null]");
         assert_eq!(format!("{}", Value::Slice(&[Value::Null])), "[null]");
 
