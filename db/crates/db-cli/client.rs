@@ -3,6 +3,7 @@ use db_proto::{clients::Client, DEFAULT_PORT};
 use bytes::Bytes;
 use clap::{Parser, Subcommand};
 use std::num::ParseIntError;
+use std::path::PathBuf;
 use std::str;
 use std::time::Duration;
 
@@ -55,6 +56,17 @@ enum Command {
         /// Specific channel or channels
         channels: Vec<String>,
     },
+    Dump {
+        /// Path to the output file (optional, defaults to "db-state.bin")
+        #[arg(long, default_value = "db-state.bin")]
+        output: PathBuf,
+    },
+    /// Load the database state from a file.
+    Load {
+        /// Path to the input file (optional, defaults to "db-state.bin")
+        #[arg(long, default_value = "db-state.bin")]
+        input: PathBuf,
+    },
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -105,6 +117,14 @@ async fn main() -> db_proto::Result<()> {
             while let Some(msg) = subscriber.next_message().await? {
                 println!("got message from the channel: {}; message = {:?}", msg.channel, msg.content);
             }
+        }
+        Command::Dump { output } => {
+            client.dump(&output).await?;
+            println!("Database state dumped to {:?}", output);
+        }
+        Command::Load { input } => {
+            client.load(&input).await?;
+            println!("Database state loaded from {:?}", input);
         }
     }
 

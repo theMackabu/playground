@@ -1,5 +1,6 @@
 use db_proto::{prelude::*, Result};
 use std::future::Future;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc, Semaphore};
@@ -16,6 +17,7 @@ struct Listener {
     limit_connections: Arc<Semaphore>,
     notify_shutdown: broadcast::Sender<()>,
     shutdown_complete_tx: mpsc::Sender<()>,
+    db_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -26,13 +28,22 @@ struct Handler {
     _shutdown_complete: mpsc::Sender<()>,
 }
 
-pub async fn run(listener: TcpListener, shutdown: impl Future) {
+pub async fn run(listener: TcpListener, shutdown: impl Future, db_path: Option<PathBuf>) {
     let (notify_shutdown, _) = broadcast::channel(1);
     let (shutdown_complete_tx, mut shutdown_complete_rx) = mpsc::channel(1);
+    let db_holder = DbDropGuard::new();
+
+    if let Some(path) = &db_path {
+        if path.exists() {
+            info!("Loading database from {:?}", path);
+            db_holder.db().load_from(path).await.expect("Failed to load database");
+        }
+    }
 
     let mut server = Listener {
+        db_path,
         listener,
-        db_holder: DbDropGuard::new(),
+        db_holder,
         limit_connections: Arc::new(Semaphore::new(MAX_CONNECTIONS)),
         notify_shutdown,
         shutdown_complete_tx,
@@ -44,7 +55,13 @@ pub async fn run(listener: TcpListener, shutdown: impl Future) {
                 error!(cause = %err, "failed to accept");
             }
         }
-        _ = shutdown => { info!("shutting down") }
+        _ = shutdown => {
+            info!("shutting down");
+            if let Some(path) = &server.db_path {
+                info!("Saving database to {:?}", path);
+                server.db_holder.db().dump_to(path).await.expect("Failed to save database");
+            }
+        }
     }
 
     let Listener {

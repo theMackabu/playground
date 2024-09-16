@@ -2,7 +2,9 @@ use tokio::sync::{broadcast, Notify};
 use tokio::time::{self, Duration, Instant};
 
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::debug;
 
@@ -14,6 +16,18 @@ pub struct DbDropGuard {
 #[derive(Debug, Clone)]
 pub struct Db {
     shared: Arc<Shared>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SerializableState {
+    entries: HashMap<String, SerializableEntry>,
+    expirations: Vec<(u64, String)>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SerializableEntry {
+    data: Vec<u8>,
+    expires_at: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -114,6 +128,63 @@ impl Db {
     pub fn publish(&self, key: &str, value: Bytes) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.pub_sub.get(key).map(|tx| tx.send(value).unwrap_or(0)).unwrap_or(0)
+    }
+
+    pub fn dump(&self) -> SerializableState {
+        let state = self.shared.state.lock().unwrap();
+        let now = Instant::now();
+
+        SerializableState {
+            entries: state
+                .entries
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        SerializableEntry {
+                            data: v.data.to_vec(),
+                            expires_at: v.expires_at.map(|instant| instant.duration_since(now).as_secs()),
+                        },
+                    )
+                })
+                .collect(),
+            expirations: state.expirations.iter().map(|(instant, key)| (instant.duration_since(now).as_secs(), key.clone())).collect(),
+        }
+    }
+
+    pub fn load(&self, serializable_state: SerializableState) {
+        let mut state = self.shared.state.lock().unwrap();
+        let now = Instant::now();
+
+        state.entries = serializable_state
+            .entries
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    Entry {
+                        data: Bytes::from(v.data),
+                        expires_at: v.expires_at.map(|secs| now + Duration::from_secs(secs)),
+                    },
+                )
+            })
+            .collect();
+
+        state.expirations = serializable_state.expirations.into_iter().map(|(secs, key)| (now + Duration::from_secs(secs), key)).collect();
+    }
+
+    pub async fn dump_to(&self, path: &PathBuf) -> crate::Result<()> {
+        let serializable_state = self.dump();
+        let serialized = bincode::serialize(&serializable_state)?;
+        tokio::fs::write(path, serialized).await?;
+        Ok(())
+    }
+
+    pub async fn load_from(&self, path: &PathBuf) -> crate::Result<()> {
+        let serialized = tokio::fs::read(path).await?;
+        let serializable_state: SerializableState = bincode::deserialize(&serialized)?;
+        self.load(serializable_state);
+        Ok(())
     }
 
     fn shutdown_purge_task(&self) {

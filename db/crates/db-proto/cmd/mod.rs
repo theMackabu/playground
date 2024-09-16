@@ -1,11 +1,15 @@
+mod dump;
 mod get;
+mod load;
 mod ping;
 mod publish;
 mod set;
 mod subscribe;
 mod unknown;
 
+pub use dump::Dump;
 pub use get::Get;
+pub use load::Load;
 pub use ping::Ping;
 pub use publish::Publish;
 pub use set::Set;
@@ -22,6 +26,8 @@ pub enum Command {
     Subscribe(Subscribe),
     Unsubscribe(Unsubscribe),
     Ping(Ping),
+    Dump(Dump),
+    Load(Load),
     Unknown(Unknown),
 }
 
@@ -37,6 +43,8 @@ impl Command {
             "subscribe" => Command::Subscribe(Subscribe::parse_frames(&mut parse)?),
             "unsubscribe" => Command::Unsubscribe(Unsubscribe::parse_frames(&mut parse)?),
             "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
+            "dump" => Command::Dump(Dump::parse_frames(&mut parse)?),
+            "load" => Command::Load(Load::parse_frames(&mut parse)?),
             _ => return Ok(Command::Unknown(Unknown::new(command_name))),
         };
 
@@ -53,6 +61,8 @@ impl Command {
             Set(cmd) => cmd.apply(db, dst).await,
             Subscribe(cmd) => cmd.apply(db, dst, shutdown).await,
             Ping(cmd) => cmd.apply(dst).await,
+            Dump(cmd) => cmd.apply(db, dst).await,
+            Load(cmd) => cmd.apply(db, dst).await,
             Unknown(cmd) => cmd.apply(dst).await,
             Unsubscribe(_) => Err("`Unsubscribe` is unsupported in this context".into()),
         }
@@ -66,6 +76,8 @@ impl Command {
             Command::Subscribe(_) => "subscribe",
             Command::Unsubscribe(_) => "unsubscribe",
             Command::Ping(_) => "ping",
+            Command::Dump(_) => "dump",
+            Command::Load(_) => "load",
             Command::Unknown(cmd) => cmd.get_name(),
         }
     }

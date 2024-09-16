@@ -2,6 +2,7 @@ mod verbose;
 
 use clap::Parser;
 use db_server::DEFAULT_PORT;
+use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tokio::signal;
 use verbose::{InfoLevel, Verbosity};
@@ -20,6 +21,9 @@ struct Cli {
 
     #[clap(flatten)]
     verbose: Verbosity<InfoLevel>,
+
+    #[arg(long, help = "Path to save/load database state")]
+    state: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -39,5 +43,5 @@ pub async fn main() -> db_proto::Result<()> {
     let addr = format!("{}:{}", cli.host, cli.port);
     let listener = TcpListener::bind(&addr).await?;
 
-    Ok(db_server::run(listener, signal::ctrl_c()).await)
+    Ok(db_server::run(listener, signal::ctrl_c(), cli.state).await)
 }

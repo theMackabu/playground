@@ -1,9 +1,10 @@
-use crate::cmd::{Get, Ping, Publish, Set, Subscribe, Unsubscribe};
+use crate::cmd::{Dump, Get, Load, Ping, Publish, Set, Subscribe, Unsubscribe};
 use crate::pkg::{Connection, Frame};
 
 use async_stream::try_stream;
 use bytes::Bytes;
 use std::io::{Error, ErrorKind};
+use std::path::Path;
 use std::time::Duration;
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio_stream::Stream;
@@ -41,6 +42,32 @@ impl Client {
         match self.read_response().await? {
             Frame::Simple(value) => Ok(value.into()),
             Frame::Bulk(value) => Ok(value),
+            frame => Err(frame.to_error()),
+        }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn dump(&mut self, path: &Path) -> crate::Result<()> {
+        let frame = Dump::new(path.to_path_buf()).into_frame();
+        debug!(request = ?frame);
+
+        self.connection.write_frame(&frame).await?;
+
+        match self.read_response().await? {
+            Frame::Simple(response) if response == "OK" => Ok(()),
+            frame => Err(frame.to_error()),
+        }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn load(&mut self, path: &Path) -> crate::Result<()> {
+        let frame = Load::new(path.to_path_buf()).into_frame();
+        debug!(request = ?frame);
+
+        self.connection.write_frame(&frame).await?;
+
+        match self.read_response().await? {
+            Frame::Simple(response) if response == "OK" => Ok(()),
             frame => Err(frame.to_error()),
         }
     }
