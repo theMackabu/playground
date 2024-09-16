@@ -1,0 +1,12 @@
+[package]
+name = "db-tests"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "db_tests"
+path = "test.rs"
+
+[dependencies]
+db-proto = { workspace = true }
+tokio = { workspace = true }

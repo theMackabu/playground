@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+	# "crates/db-cli",
+	"crates/db-proto",
+	# "crates/db-server",
+	"crates/db-tests",
+]
+
+[workspace.package]
+license = "MIT"
+edition = "2021"
+version = "0.0.1"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+
+[patch.crates-io]
+db-proto = { path = "crates/db-proto" }
+# db-server = { path = "crates/db-server" }
+
+[workspace.dependencies]
+db-proto = "0.0.1"
+parking_lot = "0.12.3"
+
+serde = { version = "1.0.210", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["full"] }
