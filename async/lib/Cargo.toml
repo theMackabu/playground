@@ -1,6 +1,6 @@
 [package]
 name = "mini-tokio"
-version = "0.3.1"
+version = "0.3.2"
 license = "MIT"
 edition = "2021"
 readme = "../README.md"
@@ -11,6 +11,5 @@ name = "mini_tokio"
 path = "async.rs"
 
 [dependencies]
-futures = "0.3.30"
 crossbeam = "0.8.4"
 mini-tokio-attr = "0.3.1"

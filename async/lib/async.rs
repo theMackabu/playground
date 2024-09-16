@@ -1,7 +1,5 @@
-pub use mini_tokio_attr::main;
-
 use crossbeam::channel;
-use futures::future::BoxFuture;
+
 use std::{
     cell::RefCell,
     future::Future,
@@ -13,6 +11,10 @@ use std::{
     task::{Context, Poll, Wake, Waker},
     time::{Duration, Instant},
 };
+
+pub use mini_tokio_attr::main;
+
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 thread_local! {
     static CURRENT: RefCell<Option<Runtime>> = RefCell::new(None);
