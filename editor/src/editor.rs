@@ -163,7 +163,8 @@ impl<L: LineLayout> TextEditor<L> {
                         let node = capture.node;
                         let highlight_name = highlight_config.query.capture_names()[capture.index as usize];
                         let color = tree_sitter_to_crossterm_color(highlight_name, &highlight_config.language_name, node);
-                        let captured_text = &text[node.start_byte()..node.end_byte()];
+
+                        // let captured_text = &text[node.start_byte()..node.end_byte()];
                         //
                         //                         writeln!(
                         //                             debug_file,

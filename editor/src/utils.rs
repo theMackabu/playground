@@ -188,7 +188,7 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         Some("r") => Some((tree_sitter_r::LANGUAGE.into(), (tree_sitter_r::HIGHLIGHTS_QUERY, "", ""), "r")),
         Some("rs") => Some((tree_sitter_rust::LANGUAGE.into(), (tree_sitter_rust::HIGHLIGHTS_QUERY, "", ""), "rust")),
         Some("sh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "bash")),
-        Some("scss") => Some((tree_sitter_scss::LANGUAGE.into(), (tree_sitter_scss::HIGHLIGHTS_QUERY, "", ""), "scss")),
+        Some("scss") => Some((tree_sitter_css::LANGUAGE.into(), (tree_sitter_css::HIGHLIGHTS_QUERY, "", ""), "scss")),
         Some("toml") => Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "toml")),
         Some("yaml" | "yml") => Some((tree_sitter_yaml::language(), (tree_sitter_yaml::HIGHLIGHTS_QUERY, "", ""), "yaml")),
         Some("zsh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "zsh")),

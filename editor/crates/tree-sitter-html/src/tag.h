@@ -1,4 +1,4 @@
-#include "tree_sitter/array.h"
+#include "../../tree-sitter/array.h"
 
 #include <string.h>
 

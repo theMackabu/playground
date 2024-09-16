@@ -3,7 +3,7 @@
 #include <string.h>
 #include <wctype.h>
 
-#include "tree_sitter/parser.h"
+#include "../../tree-sitter/parser.h"
 
 #define MAX_HEREDOCS 10
 #define DEL_SPACE 512

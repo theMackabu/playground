@@ -1,5 +1,5 @@
 #include "tag.h"
-#include "tree_sitter/parser.h"
+#include "../../tree-sitter/parser.h"
 
 #include <wctype.h>
 
