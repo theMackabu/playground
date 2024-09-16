@@ -1,0 +1,15 @@
+[package]
+name = "mini-tokio-attr"
+version = "0.2.0"
+license = "MIT"
+edition = "2021"
+description = "macros for mini-tokio"
+
+[lib]
+name = "mini_tokio_attr"
+path = "attr.rs"
+proc-macro = true
+
+[dependencies]
+quote = "1.0.37"
+syn = { version = "2.0.77", features = ["full"] }
