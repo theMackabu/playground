@@ -15,7 +15,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let gen = quote! {
         #(#attrs)*
         #vis fn #ident #generics(#inputs) -> #return_type {
-            let mini_tokio = MiniTokio::new();
+            let mini_tokio = ::mini_tokio::MiniTokio::new();
             mini_tokio.spawn(async { #block });
             mini_tokio.run();
         }
