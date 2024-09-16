@@ -6,3 +6,6 @@
 *.o linguist-detectable=false
 *.a linguist-detectable=false
 *.so linguist-detectable=false
+
+# hide all editor samples
+editor/samples/** linguist-generated=true
