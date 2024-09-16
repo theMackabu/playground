@@ -1,0 +1,10 @@
+[package]
+name = "dare"
+version = "0.0.1"
+license = "MIT"
+edition = "2021"
+description = "daring flexible data representation"
+
+[lib]
+name = "dare"
+path = "lib/value.rs"
