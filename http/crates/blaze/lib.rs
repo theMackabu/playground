@@ -405,14 +405,7 @@ pub struct Text<'a>(pub Cow<'a, str>);
 pub struct Bytes<'a>(pub Cow<'a, [u8]>);
 
 impl<T: Serialize + Send + 'static> Responder for Json<T> {
-    fn respond(self: Box<Self>) -> RespFuture {
-        Box::pin(async move {
-            let body = serde_json::to_string(&self.0)?;
-            let mut response = Response::ok().body(body.into_bytes());
-            response.content_type(ContentType::json());
-            Ok(response)
-        })
-    }
+    fn respond(self: Box<Self>) -> RespFuture { Box::pin(async move { Ok(Response::ok().json(&self.0)?.content_type(ContentType::json()).into()) }) }
 }
 
 impl Responder for String {

@@ -1,0 +1,7 @@
+[project]
+name = "db"
+version = "0.0.1"
+
+[tasks]
+cli.script = "cargo run -q --release --bin db_client %{arg.1} %{arg.2} %{arg.3}"
+server.script = "fleet run --release --bin db_spawn -- --state db-state.bin"
