@@ -3,14 +3,16 @@ use __internals_do_not_use_or_you_will_be_fired::{HttpFuture, RespFuture};
 pub use blaze_macros::{main, route, routes};
 pub use http;
 pub use tokio;
-
 pub mod header;
+
+mod date;
 mod macros;
 
 use header::{ContentType, TryIntoHeaderValue};
 use http::header::*;
 use serde::Serialize;
-use std::{borrow::Cow, collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, fmt, net::SocketAddr, sync::Arc};
+use tracing::{debug, error, info, trace, warn};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Result as IoResult},
@@ -44,6 +46,30 @@ pub enum Method {
     POST,
     PUT,
     DELETE,
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Method::ALL => write!(f, "ALL"),
+            Method::GET => write!(f, "GET"),
+            Method::POST => write!(f, "POST"),
+            Method::PUT => write!(f, "PUT"),
+            Method::DELETE => write!(f, "DELETE"),
+        }
+    }
+}
+
+impl From<String> for Method {
+    fn from(s: String) -> Self {
+        match s.to_uppercase().as_str() {
+            "GET" => Method::GET,
+            "POST" => Method::POST,
+            "PUT" => Method::PUT,
+            "DELETE" => Method::DELETE,
+            _ => Method::ALL,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -102,12 +128,41 @@ pub struct Request {
 }
 
 impl Request {
+    pub fn body(&self) -> &[u8] { &self.body }
+
+    pub fn body_length(&self) -> usize { self.body.len() }
+
+    pub fn method(&self) -> &Method { &self.method }
+
+    pub fn path(&self) -> &str { self.path.as_str() }
+
+    pub fn query(&self) -> &HashMap<String, String> { &self.query }
+
+    pub fn params(&self) -> &HashMap<String, String> { &self.params }
+
     pub fn route_param(&self, name: &str) -> Option<&String> { self.params.get(name) }
+
     pub fn query_param(&self, name: &str) -> Option<&String> { self.query.get(name) }
+
+    pub fn header(&self, name: &str) -> Option<&HeaderValue> { self.headers.get(name) }
+
+    pub fn is_json(&self) -> bool { self.content_type().map(|ct| ct.0 == mime::APPLICATION_JSON).unwrap_or(false) }
+
+    pub fn content_type(&self) -> Option<ContentType> { self.header("content-type").and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<mime::Mime>().ok()).map(ContentType) }
+
+    pub fn text(&self) -> Result<String, Error> { String::from_utf8(self.body.clone()).map_err(|e| Error(format!("Failed to parse body as text: {}", e))) }
+
+    pub fn json<T>(&self) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        serde_json::from_slice(&self.body).map_err(|e| Error(format!("Failed to parse body as JSON: {}", e)))
+    }
 }
 
 #[derive(Clone)]
 pub struct Response {
+    pub path: String,
     pub status: StatusCode,
     pub headers: HeaderMap,
     pub body: Vec<u8>,
@@ -116,6 +171,7 @@ pub struct Response {
 impl Response {
     fn new() -> Self {
         Response {
+            path: String::new(),
             status: StatusCode::Ok,
             headers: HeaderMap::new(),
             body: Vec::new(),
@@ -219,19 +275,20 @@ pub struct Server {
 impl Server {
     pub fn new(host: &str, port: u16) -> Self {
         let addr: SocketAddr = format!("{}:{}", host, port).parse().unwrap();
+        info!(port = port, host = host, "socket created");
         Server { addr }
     }
 
     pub async fn serve(self, router: Router) -> Result<(), Error> {
         let listener = TcpListener::bind(self.addr).await?;
-        println!("Server running on http://{}", self.addr);
+        info!("starting {} workers", tokio::runtime::Handle::current().metrics().num_workers());
 
         loop {
             let (stream, _) = listener.accept().await?;
             let router = router.clone();
             tokio::spawn(async move {
                 if let Err(e) = handle_connection(stream, router).await {
-                    eprintln!("Error handling connection: {}", e);
+                    error!("Error handling connection: {}", e);
                 }
             });
         }
@@ -244,6 +301,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     let mut req = parse_request(&buffer[..n])?;
 
     let mut response = Response {
+        path: req.path.to_owned(),
         status: StatusCode::NotFound,
         headers: HeaderMap::new(),
         body: b"Not Found".to_vec(),
@@ -260,6 +318,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
                 }
                 Err(e) => {
                     response = Response {
+                        path: req.path.to_owned(),
                         status: StatusCode::InternalServerError,
                         headers: HeaderMap::new(),
                         body: format!("Internal Server Error: {}", e).into_bytes(),
@@ -281,6 +340,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
                     }
                     Err(e) => {
                         response = Response {
+                            path: req.path.to_owned(),
                             status: StatusCode::InternalServerError,
                             headers: HeaderMap::new(),
                             body: format!("Internal Server Error: {}", e).into_bytes(),
@@ -294,10 +354,16 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     }
 
     let response_string = format!(
-        "HTTP/1.1 {} {}\r\nContent-Length: {}\r\n",
+        "\
+        HTTP/1.1 {} {}\r\n\
+        Server: Blaze HTTP\r\n\
+        Content-Length: {}\r\n\
+        Date: {}\r\n\
+    ",
         response.status.to_code(),
         response.status.reason_phrase(),
-        response.body.len()
+        response.body.len(),
+        date::now()
     );
 
     stream.write_all(response_string.as_bytes()).await?;
@@ -306,7 +372,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     stream.write_all(b"\r\n").await?;
     stream.write_all(&response.body).await?;
 
-    Ok(())
+    Ok(info!(method = req.method.to_string(), status = response.status.to_code(), "request '{}'", req.path))
 }
 
 fn paths_match(request_path: &str, route_path: &str) -> bool {
@@ -372,7 +438,12 @@ where
 
 fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     let request_str = String::from_utf8_lossy(buffer);
-    let mut lines = request_str.lines();
+    let mut parts = request_str.splitn(2, "\r\n\r\n");
+
+    let headers_part = parts.next().ok_or_else(|| Error("Invalid request".into()))?;
+    let body_part = parts.next().unwrap_or("");
+
+    let mut lines = headers_part.lines();
     let first_line = lines.next().ok_or_else(|| Error("Invalid request".into()))?;
     let mut parts = first_line.split_whitespace();
 
@@ -388,12 +459,15 @@ fn parse_request(buffer: &[u8]) -> Result<Request, Error> {
     let (path, query) = full_path.split_once('?').unwrap_or((full_path, ""));
     let query_params = parse_query_string(query);
 
+    let headers = parse_headers(lines)?;
+    let body = body_part.as_bytes().to_vec();
+
     Ok(Request {
         method,
-        headers: parse_headers(lines)?,
+        headers,
         query: query_params,
-        body: Vec::new(),       // For simplicity, we're not parsing the body
-        params: HashMap::new(), // This will be populated in handle_connection
+        body,
+        params: HashMap::new(),
         path: path.to_string(),
     })
 }
@@ -427,8 +501,8 @@ impl Responder for &'static [u8] {
 #[derive(Debug)]
 pub struct Error(pub String);
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { write!(f, "{}", self.0) }
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
 }
 
 impl std::error::Error for Error {}

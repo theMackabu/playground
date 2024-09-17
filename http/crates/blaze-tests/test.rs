@@ -1,9 +1,10 @@
+// required dependencies
 use blaze::{prelude::*, routes, Json, Response, Str};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct Hello {
-    name: &'static str,
+    name: String,
     furry: bool,
 }
 
@@ -29,20 +30,35 @@ async fn hello_response(_req: Request) -> HttpResponse {
 async fn hello(_req: Request, name: String) -> String { format!("Hello, {name}!") }
 
 #[blaze::route(get, "/json")]
-async fn json(_req: Request) -> Json<Hello> { Json(Hello { name: "themackabu", furry: true }) }
+async fn json(_req: Request) -> Json<Hello> {
+    Json(Hello {
+        name: "themackabu".into(),
+        furry: true,
+    })
+}
+
+#[blaze::route(post, "/json")]
+async fn get_body(req: Request) -> Result<Json<Hello>, Error> {
+    let data: Hello = req.json()?;
+    Ok(Json(data))
+}
 
 #[blaze::route(default = true)]
 async fn not_found(_req: Request) -> Str { "Hello, World!" }
 
 #[blaze::main]
 fn main() {
+    // logging output
+    tracing_subscriber::fmt().pretty().with_thread_names(true).with_max_level(tracing::Level::TRACE).init();
+
     let router = routes! {
         json,
         hello,
+        get_body,
+        not_found,
         hello_impl,
         hello_result,
         hello_response,
-        not_found,
     };
 
     Server::new("127.0.0.1", 8080).serve(router)?

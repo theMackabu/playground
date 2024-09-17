@@ -23,10 +23,13 @@ blaze-macros = { path = "crates/blaze-macros" }
 [workspace.dependencies]
 http = "1.1.0"
 mime = "0.3.17"
+bytes = "1.7.1"
 blaze = "0.1.3"
+tracing = "0.1.40"
 blaze-macros = "0.1.3"
 serde_json = "1.0.128"
 
-serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
+serde = { version = "1.0.210", features = ["derive"] }
+time = { version = "0.3.36", features = ["formatting"] }
 derive_more = { version = "1.0.0", features = ["display", "error", "from", "deref", "deref_mut"] }
