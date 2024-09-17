@@ -65,5 +65,5 @@ fn main() {
         hello_response,
     };
 
-    Server::new("127.0.0.1", 8080).serve(router)?
+    Server::bind("127.0.0.1", 8080).serve(router)?
 }

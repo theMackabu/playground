@@ -1,4 +1,4 @@
-use crate::macros;
+use crate::pkg::{error::Error, macros};
 use http::{header::InvalidHeaderValue, HeaderValue};
 use mime::Mime;
 
@@ -44,8 +44,8 @@ pub trait TryIntoHeaderValue: Sized {
     fn try_into_value(self) -> Result<HeaderValue, InvalidHeaderValue>;
 }
 
-impl From<InvalidHeaderValue> for crate::Error {
-    fn from(err: InvalidHeaderValue) -> Self { crate::Error(format!("Invalid header value: {}", err)) }
+impl From<InvalidHeaderValue> for Error {
+    fn from(err: InvalidHeaderValue) -> Self { Error(format!("Invalid header value: {}", err)) }
 }
 
 impl TryIntoHeaderValue for HeaderValue {
