@@ -1,11 +1,10 @@
-use crate::define_colors;
-use const_format::concatcp;
+use crate::languages::{Config, Language};
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
-use tree_sitter::{Language, Node};
+use tree_sitter::Node;
 
 pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: Node) -> (Color, Option<Attribute>) {
-    define_colors! {
+    crate::define_colors! {
         GREY => { r:142, g:178, b:217 },
         CYAN => { r:48, g:232, b:233 },
         AQUA => { r:78, g:162, b:193 },
@@ -86,151 +85,28 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
     }
 }
 
-pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static str, &'static str), &'static str)> {
-    const TS_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_typescript::HIGHLIGHTS_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY);
-
-    const JSX_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_javascript::JSX_HIGHLIGHT_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY);
-
-    const LESS_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_css::HIGHLIGHTS_QUERY, tree_sitter_less::HIGHLIGHTS_QUERY);
-
-    const TSX_HIGHLIGHT_QUERY: &str = concatcp!(
-        tree_sitter_javascript::JSX_HIGHLIGHT_QUERY,
-        tree_sitter_typescript::HIGHLIGHTS_QUERY,
-        tree_sitter_javascript::HIGHLIGHT_QUERY
-    );
-
+pub fn get_syntax(file_name: &Path) -> Option<Config> {
     if let Some(file_name_str) = file_name.file_name().and_then(|s| s.to_str()) {
         match file_name_str.to_lowercase().as_str() {
-            "dockerfile" => return Some((tree_sitter_docker::LANGUAGE.into(), (tree_sitter_docker::HIGHLIGHTS_QUERY, "", ""), "dockerfile")),
-            "makefile" => return Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "makefile")),
-            "maidfile" => return Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "maidfile")),
-            _ if file_name_str.starts_with('.') => {
-                let without_dot = file_name_str.trim_start_matches('.');
-                match without_dot {
-                    "zshrc" | "bashrc" | "bash_profile" | "zprofile" | "gitignore" | "gitattributes" => {
-                        return Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "rc"))
-                    }
-                    _ => {}
-                }
-            }
+            "dockerfile" => return Some(Language::Dockerfile.config()),
+            "makefile" => return Some(Language::Make.config()),
+            "maidfile" => return Some(Language::Toml.config()),
+            _ if file_name_str.starts_with('.') => match file_name_str.trim_start_matches('.') {
+                "zshrc" | "bashrc" | "bash_profile" | "zprofile" | "gitignore" | "gitattributes" => return Some(Language::Bash.config()),
+                _ => {}
+            },
             _ => {}
         }
     }
 
-    match file_name.extension().and_then(|s| s.to_str()) {
-        // Some("abap") => Some((tree_sitter_abap::LANGUAGE.into(), "abap")),
-        // Some("ada") => Some((tree_sitter_ada::LANGUAGE.into(), "ada")),
-        // Some("ahk" | "ahkl") => Some((tree_sitter_autohotkey::LANGUAGE.into(), "autohotkey")),
-        // Some("applescript" | "scpt") => Some((tree_sitter_applescript::LANGUAGE.into(), "applescript")),
-        // Some("arc") => Some((tree_sitter_arc::LANGUAGE.into(), "arc")),
-        // Some("asp" | "asax" | "ascx" | "ashx" | "asmx" | "aspx" | "axd") => Some((tree_sitter_asp::LANGUAGE.into(), "asp")),
-        // Some("as") => Some((tree_sitter_actionscript::LANGUAGE.into(), "actionscript")),
-        // Some("asc" | "ash") => Some((tree_sitter_ags_script::LANGUAGE.into(), "ags_script")),
-        // Some("awk" | "auk" | "gawk" | "mawk" | "nawk") => Some((tree_sitter_awk::LANGUAGE.into(), "awk")),
-        // Some("bat" | "cmd") => Some((tree_sitter_batch::LANGUAGE.into(), "batch")),
-        // Some("b" | "bf") => Some((tree_sitter_brainfuck::LANGUAGE.into(), "brainfuck")),
-        // Some("cmake") => Some((tree_sitter_cmake::LANGUAGE.into(), "cmake")),
-        // Some("cbl" | "cobol" | "cob") => Some((tree_sitter_cobol::LANGUAGE.into(), "cobol")),
-        // Some("class" | "java") => Some((tree_sitter_java::LANGUAGE.into(), "java")),
-        // Some("clj" | "cl2" | "cljs" | "cljx" | "cljc") => Some((tree_sitter_clojure::LANGUAGE.into(), "clojure")),
-        // Some("coffee") => Some((tree_sitter_coffeescript::LANGUAGE.into(), "coffeescript")),
-        // Some("cr") => Some((tree_sitter_crystal::LANGUAGE.into(), "crystal")),
-        // Some("cu" | "cuh") => Some((tree_sitter_cuda::LANGUAGE.into(), "cuda")),
-        // Some("cs" | "cshtml" | "csx") => Some((tree_sitter_c_sharp::LANGUAGE.into(), "c_sharp")),
-        // Some("csv") => Some((tree_sitter_csv::LANGUAGE.into(), "csv")),
-        // Some("d" | "di") => Some((tree_sitter_d::LANGUAGE.into(), "d")),
-        // Some("dart") => Some((tree_sitter_dart::LANGUAGE.into(), "dart")),
-        // Some("diff" | "patch") => Some((tree_sitter_diff::LANGUAGE.into(), "diff")),
-        // Some("ex" | "exs") => Some((tree_sitter_elixir::LANGUAGE.into(), "elixir")),
-        // Some("elm") => Some((tree_sitter_elm::LANGUAGE.into(), "elm")),
-        // Some("el") => Some((tree_sitter_emacs_lisp::LANGUAGE.into(), "emacs_lisp")),
-        // Some("erb") => Some((tree_sitter_erb::LANGUAGE.into(), "erb")),
-        // Some("erl" | "es") => Some((tree_sitter_erlang::LANGUAGE.into(), "erlang")),
-        // Some("fs" | "fsi" | "fsx") => Some((tree_sitter_f_sharp::LANGUAGE.into(), "f_sharp")),
-        // Some("f" | "f90" | "fpp" | "for") => Some((tree_sitter_fortran::LANGUAGE.into(), "fortran")),
-        // Some("fish") => Some((tree_sitter_fish::LANGUAGE.into(), "fish")),
-        // Some("fth") => Some((tree_sitter_forth::LANGUAGE.into(), "forth")),
-        // Some("g4") => Some((tree_sitter_antlr::LANGUAGE.into(), "antlr")),
-        // Some("gd") => Some((tree_sitter_gdscript::LANGUAGE.into(), "gdscript")),
-        // Some("glsl" | "vert" | "shader" | "geo" | "fshader" | "vrx" | "vsh" | "vshader" | "frag") => Some((tree_sitter_glsl::LANGUAGE.into(), "glsl")),
-        // Some("gnu" | "gp" | "plot") => Some((tree_sitter_gnuplot::LANGUAGE.into(), "gnuplot")),
-        // Some("groovy" | "gvy") => Some((tree_sitter_groovy::LANGUAGE.into(), "groovy")),
-        // Some("hlsl") => Some((tree_sitter_hlsl::LANGUAGE.into(), "hlsl")),
-        // Some("haml") => Some((tree_sitter_haml::LANGUAGE.into(), "haml")),
-        // Some("handlebars" | "hbs") => Some((tree_sitter_handlebars::LANGUAGE.into(), "handlebars")),
-        // Some("hs") => Some((tree_sitter_haskell::LANGUAGE.into(), "haskell")),
-        // Some("ini" | "cfg") => Some((tree_sitter_ini::LANGUAGE.into(), "ini")),
-        // Some("ino") => Some((tree_sitter_arduino::LANGUAGE.into(), "arduino")),
-        // Some("ijs") => Some((tree_sitter_j::LANGUAGE.into(), "j")),
-        // Some("jl") => Some((tree_sitter_julia::LANGUAGE.into(), "julia")),
-        // Some("kt" | "ktm" | "kts") => Some((tree_sitter_kotlin::LANGUAGE.into(), "kotlin")),
-        // Some("ll") => Some((tree_sitter_llvm::LANGUAGE.into(), "llvm")),
-        // Some("l" | "lex") => Some((tree_sitter_lex::LANGUAGE.into(), "lex")),
-        // Some("ls") => Some((tree_sitter_livescript::LANGUAGE.into(), "livescript")),
-        // Some("lol") => Some((tree_sitter_lolcode::LANGUAGE.into(), "lolcode")),
-        // Some("lisp" | "asd" | "lsp") => Some((tree_sitter_common_lisp::LANGUAGE.into(), "common_lisp")),
-        // Some("m4") => Some((tree_sitter_m4::LANGUAGE.into(), "m4")),
-        // Some("man" | "roff") => Some((tree_sitter_groff::LANGUAGE.into(), "groff")),
-        // Some("matlab") => Some((tree_sitter_matlab::LANGUAGE.into(), "matlab")),
-        // Some("m") => Some((tree_sitter_objective_c::LANGUAGE.into(), "objective_c")),
-        // Some("ml") => Some((tree_sitter_ocaml::LANGUAGE.into(), "ocaml")),
-        // Some("mk" | "mak") => Some((tree_sitter_makefile::LANGUAGE.into(), "makefile")),
-        // Some("nix") => Some((tree_sitter_nix::LANGUAGE.into(), "nix")),
-        // Some("numpy") => Some((tree_sitter_numpy::LANGUAGE.into(), "numpy")),
-        // Some("opencl" | "cl") => Some((tree_sitter_opencl::LANGUAGE.into(), "opencl")),
-        // Some("php") => Some((tree_sitter_php::LANGUAGE.into(), "php")),
-        // Some("pas") => Some((tree_sitter_pascal::LANGUAGE.into(), "pascal")),
-        // Some("pl") => Some((tree_sitter_perl::LANGUAGE.into(), "perl")),
-        // Some("psl") => Some((tree_sitter_powershell::LANGUAGE.into(), "powershell")),
-        // Some("pro") => Some((tree_sitter_prolog::LANGUAGE.into(), "prolog")),
-        // Some("rst") => Some((tree_sitter_restructuredtext::LANGUAGE.into(), "restructuredtext")),
-        // Some("rkt") => Some((tree_sitter_racket::LANGUAGE.into(), "racket")),
-        Some("rb" | "ruby") => Some((tree_sitter_ruby::LANGUAGE.into(), (tree_sitter_ruby::HIGHLIGHTS_QUERY, "", tree_sitter_ruby::LOCALS_QUERY), "ruby")),
-        // Some("sql") => Some((tree_sitter_sql::LANGUAGE.into(), "sql")),
-        Some("less") => Some((tree_sitter_less::language(), (LESS_HIGHLIGHT_QUERY, "", ""), "sql")),
-        Some("scala") => Some((tree_sitter_scala::LANGUAGE.into(), (tree_sitter_scala::HIGHLIGHTS_QUERY, "", tree_sitter_scala::LOCALS_QUERY), "scala")),
-        // Some("scm") => Some((tree_sitter_scheme::LANGUAGE.into(), "scheme")),
-        // Some("st") => Some((tree_sitter_smalltalk::LANGUAGE.into(), "smalltalk")),
-        Some("swift") => Some((tree_sitter_swift::LANGUAGE.into(), (tree_sitter_swift::HIGHLIGHTS_QUERY, "", ""), "swift")),
-        // Some("tcl") => Some((tree_sitter_tcl::LANGUAGE.into(), "tcl")),
-        // Some("vala") => Some((tree_sitter_vala::LANGUAGE.into(), "vala")),
-        Some("vue") => Some((tree_sitter_vue::LANGUAGE.into(), (tree_sitter_vue::HIGHLIGHTS_QUERY, tree_sitter_vue::INJECTIONS_QUERY, ""), "vue")),
-        Some("sdml") => Some((tree_sitter_sdml::language(), (tree_sitter_sdml::HIGHLIGHTS_QUERY, "", ""), "sdml")),
-        Some("xml") => Some((tree_sitter_xml::LANGUAGE.into(), (tree_sitter_xml::HIGHLIGHTS_QUERY, "", ""), "xml")),
-        Some("asm" | "nasm") => Some((tree_sitter_asm::LANGUAGE.into(), (tree_sitter_asm::HIGHLIGHTS_QUERY, tree_sitter_asm::INJECTIONS_QUERY, ""), "assembly")),
-        Some("c") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "c")),
-        Some("cpp" | "cxx" | "cc") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "cpp")),
-        Some("css" | "sass" | "scss") => Some((tree_sitter_css::LANGUAGE.into(), (tree_sitter_css::HIGHLIGHTS_QUERY, "", ""), "css")),
-        Some("go") => Some((tree_sitter_go::LANGUAGE.into(), (tree_sitter_go::HIGHLIGHTS_QUERY, "", ""), "go")),
-        Some("h") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "c_header")),
-        Some("hpp") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "cpp_header")),
-        Some("html" | "htm" | "xhtml") => Some((tree_sitter_html::LANGUAGE.into(), (tree_sitter_html::HIGHLIGHTS_QUERY, tree_sitter_html::INJECTIONS_QUERY, ""), "html")),
-        Some("json") => Some((tree_sitter_json::LANGUAGE.into(), (tree_sitter_json::HIGHLIGHTS_QUERY, "", ""), "json")),
-        Some("lua") => Some((tree_sitter_lua::LANGUAGE.into(), (tree_sitter_lua::HIGHLIGHTS_QUERY, tree_sitter_lua::INJECTIONS_QUERY, ""), "lua")),
-        Some("md" | "markdown") => Some((tree_sitter_md::LANGUAGE.into(), (tree_sitter_md::HIGHLIGHT_QUERY_BLOCK, "", ""), "markdown")),
-        Some("py" | "pyw") => Some((tree_sitter_python::LANGUAGE.into(), (tree_sitter_python::HIGHLIGHTS_QUERY, "", ""), "python")),
-        Some("r") => Some((tree_sitter_r::LANGUAGE.into(), (tree_sitter_r::HIGHLIGHTS_QUERY, "", ""), "r")),
-        Some("rs") => Some((tree_sitter_rust::LANGUAGE.into(), (tree_sitter_rust::HIGHLIGHTS_QUERY, "", ""), "rust")),
-        Some("sh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "bash")),
-        Some("toml") => Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "toml")),
-        Some("yaml" | "yml") => Some((tree_sitter_yaml::language(), (tree_sitter_yaml::HIGHLIGHTS_QUERY, "", ""), "yaml")),
-        Some("zsh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "zsh")),
-        Some("jsx") => Some((tree_sitter_javascript::LANGUAGE.into(), (JSX_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""), "jsx")),
-        Some("tsx") => Some((tree_sitter_typescript::LANGUAGE_TSX.into(), (TSX_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""), "tsx")),
+    let file_name = match file_name.extension().and_then(|s| s.to_str()) {
+        Some(name) => name,
+        None => "",
+    };
 
-        Some("js") => Some((
-            tree_sitter_javascript::LANGUAGE.into(),
-            (tree_sitter_javascript::HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""),
-            "javascript",
-        )),
-
-        Some("ts") => Some((
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            (TS_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""),
-            "typescript",
-        )),
-
-        _ => None,
+    match Language::from_token(file_name) {
+        None => None,
+        Some(lang) => Some(lang.config()),
     }
 }
 

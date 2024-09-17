@@ -1,5 +1,7 @@
 mod clipboard;
+mod constants;
 mod editor;
+mod languages;
 mod macros;
 mod terminal;
 mod ui;

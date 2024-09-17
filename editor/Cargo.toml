@@ -1,7 +1,8 @@
 [package]
 name = "meow"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 ropey = "1.6.1"
@@ -12,38 +13,16 @@ unicode-width = "0.1.13"
 unicode-segmentation = "1.11.0"
 clap = { version = "4.5.17", features = ["derive"] }
 
-# local syntaxes
-tree-sitter-html = { path = "crates/tree-sitter-html" }
-tree-sitter-asm = { path = "crates/tree-sitter-asm" }
-tree-sitter-docker = { path = "crates/tree-sitter-docker" }
-tree-sitter-xml = { path = "crates/tree-sitter-xml" }
-tree-sitter-vue = { path = "crates/tree-sitter-vue" }
-
 # tree sitter
 tree-sitter = "0.23.0"
+tree-sitter-language = "0.1.0"
 tree-sitter-highlight = "0.23.0"
-tree-sitter-rust = "0.23.0"
-tree-sitter-md = "0.3.2"
-tree-sitter-toml-ng = "0.6.0"
-tree-sitter-javascript = "0.23.0"
-tree-sitter-json = "0.23.0"
-tree-sitter-typescript = "0.23.0"
-tree-sitter-python = "0.23.2"
-tree-sitter-go = "0.23.1"
-tree-sitter-bash = "0.23.1"
-tree-sitter-yaml = "0.6.1"
-tree-sitter-r = "1.1.0"
-tree-sitter-c = "0.23.0"
-tree-sitter-css = "0.23.0"
-tree-sitter-lua = "0.2.0"
-tree-sitter-sdml = "0.3.3"
-tree-sitter-swift = "0.6.0"
-tree-sitter-scala = "0.23.2"
-tree-sitter-less = "1.0.0"
-tree-sitter-ruby = "0.23.0"
 
 [build-dependencies]
 cc = "*"
+toml = "*"
+anyhow = "*"
+serde = { version = "*", features = ["derive"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
 arboard = { version = "3.4.1", features = ["wayland-data-control"] }

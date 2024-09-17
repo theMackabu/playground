@@ -152,26 +152,11 @@ impl<L: LineLayout> TextEditor<L> {
                 let text = self.text.to_string();
                 let highlights = query_cursor.matches(&highlight_config.query, root_node, text.as_bytes());
 
-                // debugging, remove this
-                use std::fs::OpenOptions;
-                use std::io::Write;
-
-                let mut debug_file = OpenOptions::new().write(true).create(true).append(true).open("debug_output.log").expect("Failed to open debug file");
-
                 for highlight in highlights {
                     for capture in highlight.captures {
                         let node = capture.node;
                         let highlight_name = highlight_config.query.capture_names()[capture.index as usize];
                         let color = tree_sitter_to_crossterm_color(highlight_name, &highlight_config.language_name, node);
-
-                        let captured_text = &text[node.start_byte()..node.end_byte()];
-
-                        writeln!(
-                            debug_file,
-                            "Capture: index={}, name={highlight_name}, node={node:?}, color={color:?}, text={captured_text}",
-                            capture.index
-                        )
-                        .expect("Failed to write to debug file");
 
                         for i in node.start_byte()..node.end_byte() {
                             highlight_map.insert(i, color);

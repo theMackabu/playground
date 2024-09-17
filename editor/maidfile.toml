@@ -1,9 +1,7 @@
 [project]
 name = "meow"
-version = "0.0.2"
+version = "0.0.3"
 
-[tasks.test]
-script = ["rm debug_output.log", "fleet run --release samples/sample.%{arg.1}"]
-
-[tasks.install]
-script = ["cargo install --path ."]
+[tasks]
+test.script = ["fleet run --release samples/sample.%{arg.1}"]
+install.script = "cargo install --path ."
