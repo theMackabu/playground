@@ -1,5 +1,5 @@
 // required dependencies
-use blaze::{prelude::*, routes, Json, Response, Str};
+use blaze::{prelude::*, routes, Json, Redirect, Response, Str};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -29,6 +29,9 @@ async fn hello_response(_req: Request) -> HttpResponse {
 #[blaze::route(get, "/hello/{name}")]
 async fn hello(_req: Request, name: String) -> String { format!("Hello, {name}!") }
 
+#[blaze::route(get, "/redirect")]
+async fn redirect(_req: Request) -> HttpResponse { Ok(Redirect::temporary("/json")?) }
+
 #[blaze::route(get, "/json")]
 async fn json(_req: Request) -> Json<Hello> {
     Json(Hello {
@@ -54,6 +57,7 @@ fn main() {
     let router = routes! {
         json,
         hello,
+        redirect,
         get_body,
         not_found,
         hello_impl,

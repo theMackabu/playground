@@ -77,6 +77,11 @@ pub enum StatusCode {
     Ok = 200,
     Created = 201,
     NoContent = 204,
+    MovedPermanently = 301,
+    Found = 302,
+    SeeOther = 303,
+    NotModified = 304,
+    TemporaryRedirect = 307,
     BadRequest = 400,
     Unauthorized = 401,
     Forbidden = 403,
@@ -93,6 +98,11 @@ impl StatusCode {
             StatusCode::Ok => "OK",
             StatusCode::Created => "Created",
             StatusCode::NoContent => "No Content",
+            StatusCode::MovedPermanently => "Moved Permanently",
+            StatusCode::Found => "Found",
+            StatusCode::SeeOther => "See Other",
+            StatusCode::NotModified => "Not Modified",
+            StatusCode::TemporaryRedirect => "Temporary Redirect",
             StatusCode::BadRequest => "Bad Request",
             StatusCode::Unauthorized => "Unauthorized",
             StatusCode::Forbidden => "Forbidden",
@@ -109,6 +119,11 @@ impl From<u16> for StatusCode {
             200 => StatusCode::Ok,
             201 => StatusCode::Created,
             204 => StatusCode::NoContent,
+            301 => StatusCode::MovedPermanently,
+            302 => StatusCode::Found,
+            303 => StatusCode::SeeOther,
+            304 => StatusCode::NotModified,
+            307 => StatusCode::TemporaryRedirect,
             400 => StatusCode::BadRequest,
             401 => StatusCode::Unauthorized,
             403 => StatusCode::Forbidden,
@@ -218,6 +233,11 @@ pub struct Response {
     pub body: Vec<u8>,
 }
 
+pub struct Redirect {
+    location: String,
+    status: StatusCode,
+}
+
 impl Response {
     fn new() -> Self {
         Response {
@@ -267,6 +287,13 @@ impl Response {
         Ok(self)
     }
 
+    pub fn redirect(mut self, status: StatusCode, location: &str) -> Result<Self, Error> {
+        self.status = status;
+        self.headers.insert(LOCATION, HeaderValue::from_str(location)?);
+
+        Ok(self)
+    }
+
     pub async fn write_headers<W: AsyncWriteExt + Unpin>(&self, stream: &mut W) -> IoResult<()> {
         for (key, value) in self.headers.iter() {
             let header_name = key.as_str();
@@ -278,6 +305,26 @@ impl Response {
             stream.write_all(header.as_bytes()).await?;
         }
         Ok(())
+    }
+}
+
+impl Redirect {
+    pub fn temporary(location: impl Into<String>) -> Result<Response, Error> {
+        let mut response = Response::new();
+
+        response.status = StatusCode::TemporaryRedirect;
+        response.headers.insert(LOCATION, HeaderValue::from_str(&location.into())?);
+
+        Ok(response)
+    }
+
+    pub fn permanent(location: impl Into<String>) -> Result<Response, Error> {
+        let mut response = Response::new();
+
+        response.status = StatusCode::MovedPermanently;
+        response.headers.insert(LOCATION, HeaderValue::from_str(&location.into())?);
+
+        Ok(response)
     }
 }
 
@@ -425,7 +472,7 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     let status_value = response.status.reason_phrase().to_lowercase();
 
     match response.status as u16 {
-        200 | 201 | 204 => info!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
+        200 | 201 | 204 | 301 | 302 | 303 | 304 | 307 => info!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
         400 | 401 | 403 | 404 | 405 => warn!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
         _ => error!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
     };
