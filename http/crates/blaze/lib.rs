@@ -233,11 +233,6 @@ pub struct Response {
     pub body: Vec<u8>,
 }
 
-pub struct Redirect {
-    location: String,
-    status: StatusCode,
-}
-
 impl Response {
     fn new() -> Self {
         Response {
@@ -308,22 +303,21 @@ impl Response {
     }
 }
 
-impl Redirect {
-    pub fn temporary(location: impl Into<String>) -> Result<Response, Error> {
+pub mod redirect {
+    use crate::Error;
+    use crate::HeaderValue;
+    use crate::Response;
+    use crate::StatusCode;
+    use http::header::LOCATION;
+
+    pub fn temporary(location: impl Into<String>) -> Result<Response, Error> { create_redirect(StatusCode::TemporaryRedirect, location) }
+
+    pub fn permanent(location: impl Into<String>) -> Result<Response, Error> { create_redirect(StatusCode::MovedPermanently, location) }
+
+    fn create_redirect(status: StatusCode, location: impl Into<String>) -> Result<Response, Error> {
         let mut response = Response::new();
-
-        response.status = StatusCode::TemporaryRedirect;
+        response.status = status;
         response.headers.insert(LOCATION, HeaderValue::from_str(&location.into())?);
-
-        Ok(response)
-    }
-
-    pub fn permanent(location: impl Into<String>) -> Result<Response, Error> {
-        let mut response = Response::new();
-
-        response.status = StatusCode::MovedPermanently;
-        response.headers.insert(LOCATION, HeaderValue::from_str(&location.into())?);
-
         Ok(response)
     }
 }
