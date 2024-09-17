@@ -12,7 +12,7 @@ use header::{ContentType, TryIntoHeaderValue};
 use http::header::*;
 use serde::Serialize;
 use std::{borrow::Cow, collections::HashMap, fmt, net::SocketAddr, sync::Arc};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Result as IoResult},
@@ -81,6 +81,7 @@ pub enum StatusCode {
     Unauthorized = 401,
     Forbidden = 403,
     NotFound = 404,
+    MethodNotAllowed = 405,
     InternalServerError = 500,
 }
 
@@ -96,6 +97,7 @@ impl StatusCode {
             StatusCode::Unauthorized => "Unauthorized",
             StatusCode::Forbidden => "Forbidden",
             StatusCode::NotFound => "Not Found",
+            StatusCode::MethodNotAllowed => "Method Not Allowed",
             StatusCode::InternalServerError => "Internal Server Error",
         }
     }
@@ -111,13 +113,14 @@ impl From<u16> for StatusCode {
             401 => StatusCode::Unauthorized,
             403 => StatusCode::Forbidden,
             404 => StatusCode::NotFound,
+            405 => StatusCode::MethodNotAllowed,
             500 => StatusCode::InternalServerError,
             _ => panic!("Unsupported status code"),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Request {
     pub method: Method,
     pub path: String,
@@ -128,34 +131,81 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn body(&self) -> &[u8] { &self.body }
+    #[instrument]
+    pub fn body(&self) -> &[u8] {
+        trace!("request->body called");
+        &self.body
+    }
 
-    pub fn body_length(&self) -> usize { self.body.len() }
+    #[instrument]
+    pub fn body_length(&self) -> usize {
+        trace!("request->body_length called");
+        self.body.len()
+    }
 
-    pub fn method(&self) -> &Method { &self.method }
+    #[instrument]
+    pub fn method(&self) -> &Method {
+        trace!("request->method called");
+        &self.method
+    }
 
-    pub fn path(&self) -> &str { self.path.as_str() }
+    #[instrument]
+    pub fn path(&self) -> &str {
+        trace!("request->path called");
+        self.path.as_str()
+    }
 
-    pub fn query(&self) -> &HashMap<String, String> { &self.query }
+    #[instrument]
+    pub fn query(&self) -> &HashMap<String, String> {
+        trace!("request->query called");
+        &self.query
+    }
 
-    pub fn params(&self) -> &HashMap<String, String> { &self.params }
+    #[instrument]
+    pub fn params(&self) -> &HashMap<String, String> {
+        trace!("request->params called");
+        &self.params
+    }
 
-    pub fn route_param(&self, name: &str) -> Option<&String> { self.params.get(name) }
+    #[instrument]
+    pub fn route_param(&self, name: &str) -> Option<&String> {
+        trace!("request->trace called");
+        self.params.get(name)
+    }
 
-    pub fn query_param(&self, name: &str) -> Option<&String> { self.query.get(name) }
+    #[instrument]
+    pub fn query_param(&self, name: &str) -> Option<&String> {
+        trace!("request->query_param called");
+        self.query.get(name)
+    }
 
-    pub fn header(&self, name: &str) -> Option<&HeaderValue> { self.headers.get(name) }
+    #[instrument]
+    pub fn header(&self, name: &str) -> Option<&HeaderValue> {
+        trace!("request->trace called");
+        self.headers.get(name)
+    }
 
-    pub fn is_json(&self) -> bool { self.content_type().map(|ct| ct.0 == mime::APPLICATION_JSON).unwrap_or(false) }
+    #[instrument]
+    pub fn is_json(&self) -> bool {
+        trace!("request->is_json called");
+        self.content_type().map(|ct| ct.0 == mime::APPLICATION_JSON).unwrap_or(false)
+    }
 
-    pub fn content_type(&self) -> Option<ContentType> { self.header("content-type").and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<mime::Mime>().ok()).map(ContentType) }
+    #[instrument]
+    pub fn content_type(&self) -> Option<ContentType> {
+        trace!("request->content_type called");
+        self.header("content-type").and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<mime::Mime>().ok()).map(ContentType)
+    }
 
-    pub fn text(&self) -> Result<String, Error> { String::from_utf8(self.body.clone()).map_err(|e| Error(format!("Failed to parse body as text: {}", e))) }
+    #[instrument]
+    pub fn text(&self) -> Result<String, Error> {
+        trace!("request->text called");
+        String::from_utf8(self.body.clone()).map_err(|e| Error(format!("Failed to parse body as text: {}", e)))
+    }
 
-    pub fn json<T>(&self) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
+    #[instrument]
+    pub fn json<T: serde::de::DeserializeOwned>(&self) -> Result<T, Error> {
+        trace!("request->json called");
         serde_json::from_slice(&self.body).map_err(|e| Error(format!("Failed to parse body as JSON: {}", e)))
     }
 }
@@ -372,7 +422,15 @@ async fn handle_connection(mut stream: TcpStream, router: Router) -> Result<(), 
     stream.write_all(b"\r\n").await?;
     stream.write_all(&response.body).await?;
 
-    Ok(info!(method = req.method.to_string(), status = response.status.to_code(), "request '{}'", req.path))
+    let status_value = response.status.reason_phrase().to_lowercase();
+
+    match response.status as u16 {
+        200 | 201 | 204 => info!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
+        400 | 401 | 403 | 404 | 405 => warn!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
+        _ => error!(path = req.path, method = req.method.to_string(), status = response.status.to_code(), "{status_value}"),
+    };
+
+    Ok(())
 }
 
 fn paths_match(request_path: &str, route_path: &str) -> bool {
