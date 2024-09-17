@@ -10,26 +10,41 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
         CYAN => { r:48, g:232, b:233 },
         AQUA => { r:78, g:162, b:193 },
         BLUE => { r:103, g:179, b:255 },
-        GREEN => { r:45, g:232, b:170 },
+        GREEN => { r: 45, g:232, b:170 },
+        PEACH => { r:244, g:170, b:163 },
         YELLOW => { r:231, g:205, b:125 },
         ORANGE => { r:255, g:139, b:126 },
         MAGENTA => { r:205, g:162, b:244 },
+        DARK_GREY => { r:80, g:85, b:89 },
         DARK_GREEN => { r:71, g:131, b:112 },
+        LIGHT_GREEN => { r:164, g:225, b:133 },
     };
 
-    if lang == "html" || lang == "jsx" {
-        match node.kind() {
-            "<" | ">" | "</" => return (Colors::DARK_GREEN, None),
+    if lang == "html" || lang == "jsx" || lang == "xml" || lang == "tsx" {
+        match highlight_name {
+            "punctuation.special" => return (Colors::GREY, None),
+            "variable.parameter" => return (Colors::MAGENTA, None),
+            "tag" => return (Colors::GREEN, None),
+            "constructor" => return (Colors::CYAN, None),
             _ => {}
         }
 
-        if highlight_name == "tag" {
-            return (Colors::DARK_GREEN, None);
+        match node.kind() {
+            "\"" => return (Colors::ORANGE, None),
+            "<" | ">" | "</" => return (Colors::DARK_GREEN, None),
+            "identifier" => return (Colors::GREEN, None),
+            "CData" => return (Color::White, None),
+            "CDStart" | "]]>" => return (Colors::BLUE, None),
+            "Name" | "attribute_name" => return (Colors::LIGHT_GREEN, None),
+            "<?" | "?>" | "version" | "encoding" | "xml" => return (Colors::GREY, None),
+            _ => {}
         }
     }
 
     match node.kind() {
-        "line_comment" | "js_comment" => (Color::DarkGrey, None),
+        "escape_sequence" => (Colors::PEACH, Some(Attribute::Italic)),
+        "identifier_reference" => (Colors::MAGENTA, None),
+        "line_comment" | "js_comment" | "comment" => (Colors::DARK_GREY, None),
         "raw_text" => (Color::Grey, None),
         "attribute_name" | "word" => (Colors::MAGENTA, None),
         "tag_name" => (Colors::GREEN, None),
@@ -41,7 +56,7 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
         "fenced_code_block" => (Colors::BLUE, None),
         "color_value" | "#" => (Colors::ORANGE, None),
         "code_fence_content" => (Color::Grey, None),
-        "list_marker_minus" => (Colors::GREY, None),
+        "list_marker_minus" | "#{" => (Colors::GREY, None),
         "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (Colors::YELLOW, None),
         "mutable_specifier" => (Colors::CYAN, Some(Attribute::Italic)),
         _ => match highlight_name {
@@ -49,22 +64,22 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
             "punctuation.special" | "text.title" => (Colors::ORANGE, None),
             "definition.module" => (Colors::BLUE, None),
             "property" => (Colors::MAGENTA, None),
-            "function" => (Colors::GREEN, None),
+            "function" | "function.call" => (Colors::GREEN, None),
             "function.macro" => (Colors::AQUA, Some(Attribute::Italic)),
-            "function.method" | "constructor" => (Colors::CYAN, None),
+            "function.method" | "constructor" | "method" => (Colors::CYAN, None),
             "keyword" | "keyword.operator" => (Colors::BLUE, None),
-            "comment" => (Color::DarkGrey, None),
+            "comment" => (Colors::DARK_GREY, None),
             "operator" | "attribute" | "punctuation.bracket" => (Colors::GREY, None),
             "string" | "string.special" | "comment.documentation" => (Colors::ORANGE, None),
             "variable.builtin" | "conditional" | "repeat" | "keyword.function" | "keyword.return" => (Colors::BLUE, None),
-            "variable" | "variable.parameter" => (Colors::MAGENTA, None),
+            "variable" | "variable.parameter" | "parameter" | "local.reference" => (Colors::MAGENTA, None),
             "number" | "float" => (Colors::YELLOW, None),
-            "type" | "type.builtin" => (Colors::CYAN, None),
+            "type" | "type.builtin" | "type.definition" => (Colors::CYAN, None),
             "type.enum.variant" => (Colors::BLUE, None),
             "constant" | "constant.builtin" => (Colors::BLUE, None),
             "punctuation" | "punctuation.delimiter" => (Color::White, None),
             "label" => (Color::Green, None),
-            "module" => (Colors::BLUE, None),
+            "module" | "include" => (Colors::BLUE, None),
             "error" => (Color::Red, None),
             _ => (Color::Reset, None),
         },
@@ -72,6 +87,18 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
 }
 
 pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static str, &'static str), &'static str)> {
+    const TS_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_typescript::HIGHLIGHTS_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY);
+
+    const JSX_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_javascript::JSX_HIGHLIGHT_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY);
+
+    const LESS_HIGHLIGHT_QUERY: &str = concatcp!(tree_sitter_css::HIGHLIGHTS_QUERY, tree_sitter_less::HIGHLIGHTS_QUERY);
+
+    const TSX_HIGHLIGHT_QUERY: &str = concatcp!(
+        tree_sitter_javascript::JSX_HIGHLIGHT_QUERY,
+        tree_sitter_typescript::HIGHLIGHTS_QUERY,
+        tree_sitter_javascript::HIGHLIGHT_QUERY
+    );
+
     if let Some(file_name_str) = file_name.file_name().and_then(|s| s.to_str()) {
         match file_name_str.to_lowercase().as_str() {
             "dockerfile" => return Some((tree_sitter_docker::LANGUAGE.into(), (tree_sitter_docker::HIGHLIGHTS_QUERY, "", ""), "dockerfile")),
@@ -158,25 +185,22 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         // Some("pro") => Some((tree_sitter_prolog::LANGUAGE.into(), "prolog")),
         // Some("rst") => Some((tree_sitter_restructuredtext::LANGUAGE.into(), "restructuredtext")),
         // Some("rkt") => Some((tree_sitter_racket::LANGUAGE.into(), "racket")),
-        // Some("rb" | "ruby") => Some((tree_sitter_ruby::LANGUAGE.into(), "ruby")),
+        Some("rb" | "ruby") => Some((tree_sitter_ruby::LANGUAGE.into(), (tree_sitter_ruby::HIGHLIGHTS_QUERY, "", tree_sitter_ruby::LOCALS_QUERY), "ruby")),
         // Some("sql") => Some((tree_sitter_sql::LANGUAGE.into(), "sql")),
-        // Some("sass") => Some((tree_sitter_sass::LANGUAGE.into(), "sass")),
-        // Some("scala") => Some((tree_sitter_scala::LANGUAGE.into(), "scala")),
+        Some("less") => Some((tree_sitter_less::language(), (LESS_HIGHLIGHT_QUERY, "", ""), "sql")),
+        Some("scala") => Some((tree_sitter_scala::LANGUAGE.into(), (tree_sitter_scala::HIGHLIGHTS_QUERY, "", tree_sitter_scala::LOCALS_QUERY), "scala")),
         // Some("scm") => Some((tree_sitter_scheme::LANGUAGE.into(), "scheme")),
         // Some("st") => Some((tree_sitter_smalltalk::LANGUAGE.into(), "smalltalk")),
-        // Some("swift") => Some((tree_sitter_swift::LANGUAGE.into(), "swift")),
+        Some("swift") => Some((tree_sitter_swift::LANGUAGE.into(), (tree_sitter_swift::HIGHLIGHTS_QUERY, "", ""), "swift")),
         // Some("tcl") => Some((tree_sitter_tcl::LANGUAGE.into(), "tcl")),
         // Some("vala") => Some((tree_sitter_vala::LANGUAGE.into(), "vala")),
-        // Some("vb" | "vbs") => Some((tree_sitter_visual_basic::LANGUAGE.into(), "visual_basic")),
-        // Some("vue") => Some((tree_sitter_vue::LANGUAGE.into(), "vue")),
-        // Some("xm" | "x" | "xi") => Some((tree_sitter_logos::LANGUAGE.into(), "logos")),
-        // Some("xml") => Some((tree_sitter_xml::LANGUAGE.into(), "xml")),
-        // Some("y" | "yacc") => Some((tree_sitter_yacc::LANGUAGE.into(), "yacc")),
-        // Some("yxx") => Some((tree_sitter_bison::LANGUAGE.into(), "bison")),
+        Some("vue") => Some((tree_sitter_vue::LANGUAGE.into(), (tree_sitter_vue::HIGHLIGHTS_QUERY, tree_sitter_vue::INJECTIONS_QUERY, ""), "vue")),
+        Some("sdml") => Some((tree_sitter_sdml::language(), (tree_sitter_sdml::HIGHLIGHTS_QUERY, "", ""), "sdml")),
+        Some("xml") => Some((tree_sitter_xml::LANGUAGE.into(), (tree_sitter_xml::HIGHLIGHTS_QUERY, "", ""), "xml")),
         Some("asm" | "nasm") => Some((tree_sitter_asm::LANGUAGE.into(), (tree_sitter_asm::HIGHLIGHTS_QUERY, tree_sitter_asm::INJECTIONS_QUERY, ""), "assembly")),
         Some("c") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "c")),
         Some("cpp" | "cxx" | "cc") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "cpp")),
-        Some("css") => Some((tree_sitter_css::LANGUAGE.into(), (tree_sitter_css::HIGHLIGHTS_QUERY, "", ""), "css")),
+        Some("css" | "sass" | "scss") => Some((tree_sitter_css::LANGUAGE.into(), (tree_sitter_css::HIGHLIGHTS_QUERY, "", ""), "css")),
         Some("go") => Some((tree_sitter_go::LANGUAGE.into(), (tree_sitter_go::HIGHLIGHTS_QUERY, "", ""), "go")),
         Some("h") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "c_header")),
         Some("hpp") => Some((tree_sitter_c::LANGUAGE.into(), (tree_sitter_c::HIGHLIGHT_QUERY, "", ""), "cpp_header")),
@@ -188,10 +212,11 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
         Some("r") => Some((tree_sitter_r::LANGUAGE.into(), (tree_sitter_r::HIGHLIGHTS_QUERY, "", ""), "r")),
         Some("rs") => Some((tree_sitter_rust::LANGUAGE.into(), (tree_sitter_rust::HIGHLIGHTS_QUERY, "", ""), "rust")),
         Some("sh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "bash")),
-        Some("scss") => Some((tree_sitter_css::LANGUAGE.into(), (tree_sitter_css::HIGHLIGHTS_QUERY, "", ""), "scss")),
         Some("toml") => Some((tree_sitter_toml_ng::language(), (tree_sitter_toml_ng::HIGHLIGHTS_QUERY, "", ""), "toml")),
         Some("yaml" | "yml") => Some((tree_sitter_yaml::language(), (tree_sitter_yaml::HIGHLIGHTS_QUERY, "", ""), "yaml")),
         Some("zsh") => Some((tree_sitter_bash::LANGUAGE.into(), (tree_sitter_bash::HIGHLIGHT_QUERY, "", ""), "zsh")),
+        Some("jsx") => Some((tree_sitter_javascript::LANGUAGE.into(), (JSX_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""), "jsx")),
+        Some("tsx") => Some((tree_sitter_typescript::LANGUAGE_TSX.into(), (TSX_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""), "tsx")),
 
         Some("js") => Some((
             tree_sitter_javascript::LANGUAGE.into(),
@@ -201,24 +226,8 @@ pub fn get_syntax(file_name: &Path) -> Option<(Language, (&'static str, &'static
 
         Some("ts") => Some((
             tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            (concatcp!(tree_sitter_typescript::HIGHLIGHTS_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY), "", ""),
+            (TS_HIGHLIGHT_QUERY, tree_sitter_javascript::INJECTIONS_QUERY, ""),
             "typescript",
-        )),
-
-        Some("jsx") => Some((
-            tree_sitter_javascript::LANGUAGE.into(),
-            (
-                concatcp!(tree_sitter_javascript::JSX_HIGHLIGHT_QUERY, tree_sitter_javascript::HIGHLIGHT_QUERY),
-                tree_sitter_javascript::INJECTIONS_QUERY,
-                "",
-            ),
-            "jsx",
-        )),
-
-        Some("tsx") => Some((
-            tree_sitter_typescript::LANGUAGE_TSX.into(),
-            (concatcp!(tree_sitter_typescript::HIGHLIGHTS_QUERY, tree_sitter_javascript::JSX_HIGHLIGHT_QUERY), "", ""),
-            "tsx",
         )),
 
         _ => None,
@@ -303,6 +312,7 @@ pub fn file_type(file_name: &Path) -> String {
         Some("jl") => "julia",
         Some("kt" | "ktm" | "kts") => "kotlin",
         Some("ll") => "llvm",
+        Some("less") => "less",
         Some("l" | "lex") => "lex",
         Some("lua") => "lua",
         Some("ls") => "livescript",
@@ -336,6 +346,7 @@ pub fn file_type(file_name: &Path) -> String {
         Some("sql") => "sql",
         Some("sass") => "sass",
         Some("scala") => "scala",
+        Some("sdml") => "SDML",
         Some("scm") => "scheme",
         Some("st") => "smalltalk",
         Some("swift") => "swift",

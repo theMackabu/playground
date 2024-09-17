@@ -1,0 +1,153 @@
+// Variables
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$font-stack: 'Helvetica', 'Arial', sans-serif;
+$base-font-size: 16px;
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin button($bg-color, $text-color) {
+  background-color: $bg-color;
+  color: $text-color;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+	 background-color: darken($bg-color, 10%);
+  }
+}
+
+// Functions
+@function calculate-width($col-count, $margin) {
+  @return calc((100% / #{$col-count}) - (#{$margin} * 2));
+}
+
+// Main Styles
+body {
+  font-family: $font-stack;
+  font-size: $base-font-size;
+  line-height: 1.6;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+header {
+  background-color: $primary-color;
+  color: white;
+  padding: 1rem 0;
+
+  nav {
+	 @include flex-center;
+
+	 ul {
+		list-style-type: none;
+		padding: 0;
+
+		li {
+		  display: inline-block;
+		  margin-right: 20px;
+
+		  a {
+			 color: white;
+			 text-decoration: none;
+			 font-weight: bold;
+
+			 &:hover {
+				text-decoration: underline;
+			 }
+		  }
+		}
+	 }
+  }
+}
+
+.button {
+  &-primary {
+	 @include button($primary-color, white);
+  }
+
+  &-secondary {
+	 @include button($secondary-color, white);
+  }
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -10px;
+
+  .col {
+	 padding: 10px;
+	 box-sizing: border-box;
+
+	 // Using the function to calculate width
+	 &-4 {
+		width: calculate-width(3, 10px);
+	 }
+
+	 &-3 {
+		width: calculate-width(4, 10px);
+	 }
+
+	 &-2 {
+		width: calculate-width(6, 10px);
+	 }
+  }
+}
+
+// Using SASS built-in functions
+.text {
+  &-large {
+	 font-size: 1.5 * $base-font-size;
+  }
+
+  &-small {
+	 font-size: 0.8 * $base-font-size;
+  }
+
+  &-primary {
+	 color: $primary-color;
+  }
+
+  &-secondary {
+	 color: $secondary-color;
+  }
+}
+
+// Demonstrating @extend
+.error {
+  border: 1px solid #ff0000;
+  background-color: #ffeeee;
+}
+
+.critical-error {
+  @extend .error;
+  font-weight: bold;
+  color: #ff0000;
+}
+
+// Media query with SASS
+@media (max-width: 768px) {
+  .container {
+	 padding: 0 10px;
+  }
+
+  .grid {
+	 .col {
+		width: 100% !important;
+	 }
+  }
+}

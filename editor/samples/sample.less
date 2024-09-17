@@ -1,0 +1,177 @@
+// Variables
+@primary-color: #3498db;
+@secondary-color: #2ecc71;
+@font-stack: 'Helvetica', 'Arial', sans-serif;
+@base-font-size: 16px;
+
+// Mixins
+.flex-center() {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.button(@bg-color, @text-color) {
+	background-color: @bg-color;
+	color: @text-color;
+	padding: 10px 15px;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+
+	&:hover {
+		background-color: darken(@bg-color, 10%);
+	}
+}
+
+// Functions
+.calculate-width(@col-count, @margin) {
+	width: calc((100% / @col-count) - (@margin * 2));
+}
+
+// Main Styles
+body {
+	font-family: @font-stack;
+	font-size: @base-font-size;
+	line-height: 1.6;
+	color: #333;
+}
+
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 20px;
+}
+
+header {
+	background-color: @primary-color;
+	color: white;
+	padding: 1rem 0;
+
+	nav {
+		.flex-center();
+
+		ul {
+			list-style-type: none;
+			padding: 0;
+
+			li {
+				display: inline-block;
+				margin-right: 20px;
+
+				a {
+					color: white;
+					text-decoration: none;
+					font-weight: bold;
+
+					&:hover {
+						text-decoration: underline;
+					}
+				}
+			}
+		}
+	}
+}
+
+.button {
+	&-primary {
+		.button(@primary-color, white);
+	}
+
+	&-secondary {
+		.button(@secondary-color, white);
+	}
+}
+
+.grid {
+	display: flex;
+	flex-wrap: wrap;
+	margin: -10px;
+
+	.col {
+		padding: 10px;
+		box-sizing: border-box;
+
+		&-4 {
+			.calculate-width(3, 10px);
+		}
+
+		&-3 {
+			.calculate-width(4, 10px);
+		}
+
+		&-2 {
+			.calculate-width(6, 10px);
+		}
+	}
+}
+
+// Using LESS operations
+.text {
+	&-large {
+		font-size: @base-font-size * 1.5;
+	}
+
+	&-small {
+		font-size: @base-font-size * 0.8;
+	}
+
+	&-primary {
+		color: @primary-color;
+	}
+
+	&-secondary {
+		color: @secondary-color;
+	}
+}
+
+// Demonstrating extending
+.error {
+	border: 1px solid #ff0000;
+	background-color: #ffeeee;
+}
+
+.critical-error {
+	&:extend(.error);
+	font-weight: bold;
+	color: #ff0000;
+}
+
+// Media query with LESS
+@media (max-width: 768px) {
+	.container {
+		padding: 0 10px;
+	}
+
+	.grid {
+		.col {
+			width: 100% !important;
+		}
+	}
+}
+
+// Demonstrating LESS guards
+.theme(@theme) when (@theme = light) {
+	background-color: #ffffff;
+	color: #333333;
+}
+
+.theme(@theme) when (@theme = dark) {
+	background-color: #333333;
+	color: #ffffff;
+}
+
+.themed-element {
+	.theme(light);
+}
+
+// Demonstrating LESS loops
+.generate-columns(6);
+
+.generate-columns(@n, @i: 1) when (@i =< @n) {
+	.col-@{i} {
+		width: (@i * 100% / @n);
+	}
+	.generate-columns(@n, (@i + 1));
+}

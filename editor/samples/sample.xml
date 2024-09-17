@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <person id="1">
+    <name>John Doe</name>
+    <age>30</age>
+    <email>john.doe@example.com</email>
+    <address>
+      <street>123 Main St</street>
+      <city>Anytown</city>
+      <country>USA</country>
+    </address>
+  </person>
+  
+  <person id="2">
+    <name>Jane Smith</name>
+    <age>28</age>
+    <email>jane.smith@example.com</email>
+    <address>
+      <street>456 Elm St</street>
+      <city>Otherville</city>
+      <country>Canada</country>
+    </address>
+  </person>
+  
+  <settings>
+    <theme>dark</theme>
+    <notifications enabled="true">
+      <email>weekly</email>
+      <push>daily</push>
+    </notifications>
+  </settings>
+  
+  <!-- This is a comment -->
+  <data-list>
+    <item><![CDATA[Some <special> characters & data]]></item>
+    <item>&lt;escaped&gt; XML &amp; entities</item>
+  </data-list>
+</root>

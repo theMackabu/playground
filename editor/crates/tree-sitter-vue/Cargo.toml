@@ -1,0 +1,18 @@
+[package]
+name = "tree-sitter-vue"
+version = "0.23.0"
+edition = "2021"
+build = "bindings/build.rs"
+
+[lib]
+name = "tree_sitter_vue"
+path = "bindings/lib.rs"
+
+[dependencies.tree-sitter-language]
+version = "0.1.0"
+
+[dev-dependencies.tree-sitter]
+version = "0.23"
+
+[build-dependencies.cc]
+version = "1.0.87"

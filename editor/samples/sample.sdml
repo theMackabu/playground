@@ -1,0 +1,44 @@
+module campaign base <https://advertising.amazon.com/api-model> is
+
+  import [dc skos xsd]
+
+  @skos:prefLabel = "Campaign sub-domain"@en
+  @skos:version = xsd:decimal(2)
+
+  datatype Name <- xsd:string is
+	 @xsd:minLength = 5
+	 @xsd:maxLength = 25
+  end
+
+  datatype Identifier <- opaque xsd:string is
+	 @xsd:length = 20
+  end
+
+  property CampaignId -> Identifier is
+	 @skos:prefLabel = [
+		"Campaign Identifier"@en
+		"Identified de campagne"@fr
+	 ]
+	 @skos:description = "The globally unique identifier for a Campaign entity"@en
+  end
+
+  structure Tag is
+	 key -> xsd:NMTOKEN
+	 value -> {0..} rdfs:langStrings
+  end
+
+  entity Campaign is
+	 identity ref CampaignId
+
+	 name -> Name is
+		@skos:definition = "the name of the campaign"@en
+	 end
+
+	 tag -> {0..} Tag
+
+	 target -> {1..} Target
+  end
+
+  entity Target
+
+end

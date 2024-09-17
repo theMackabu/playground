@@ -16,6 +16,8 @@ clap = { version = "4.5.17", features = ["derive"] }
 tree-sitter-html = { path = "crates/tree-sitter-html" }
 tree-sitter-asm = { path = "crates/tree-sitter-asm" }
 tree-sitter-docker = { path = "crates/tree-sitter-docker" }
+tree-sitter-xml = { path = "crates/tree-sitter-xml" }
+tree-sitter-vue = { path = "crates/tree-sitter-vue" }
 
 # tree sitter
 tree-sitter = "0.23.0"
@@ -34,6 +36,11 @@ tree-sitter-r = "1.1.0"
 tree-sitter-c = "0.23.0"
 tree-sitter-css = "0.23.0"
 tree-sitter-lua = "0.2.0"
+tree-sitter-sdml = "0.3.3"
+tree-sitter-swift = "0.6.0"
+tree-sitter-scala = "0.23.2"
+tree-sitter-less = "1.0.0"
+tree-sitter-ruby = "0.23.0"
 
 [build-dependencies]
 cc = "*"
