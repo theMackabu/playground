@@ -45,7 +45,7 @@ pub struct Request {
     pub query: HashMap<String, String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Response {
     pub path: String,
     pub status: StatusCode,

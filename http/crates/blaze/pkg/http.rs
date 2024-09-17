@@ -7,7 +7,7 @@ use crate::{
 };
 
 use http::header::*;
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, fmt, net::SocketAddr, sync::Arc};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Result as IoResult},
@@ -17,85 +17,87 @@ use tokio::{
 impl Request {
     #[instrument]
     pub fn body(&self) -> &[u8] {
-        trace!("request->body called");
+        debug!("request->body called");
         &self.body
     }
 
     #[instrument]
     pub fn body_length(&self) -> usize {
-        trace!("request->body_length called");
+        debug!("request->body_length called");
         self.body.len()
     }
 
     #[instrument]
     pub fn method(&self) -> &Method {
-        trace!("request->method called");
+        debug!("request->method called");
         &self.method
     }
 
     #[instrument]
     pub fn path(&self) -> &str {
-        trace!("request->path called");
+        debug!("request->path called");
         self.path.as_str()
     }
 
     #[instrument]
     pub fn query(&self) -> &HashMap<String, String> {
-        trace!("request->query called");
+        debug!("request->query called");
         &self.query
     }
 
     #[instrument]
     pub fn params(&self) -> &HashMap<String, String> {
-        trace!("request->params called");
+        debug!("request->params called");
         &self.params
     }
 
     #[instrument]
     pub fn route_param(&self, name: &str) -> Option<&String> {
-        trace!("request->trace called");
+        debug!("request->trace called");
         self.params.get(name)
     }
 
     #[instrument]
     pub fn query_param(&self, name: &str) -> Option<&String> {
-        trace!("request->query_param called");
+        debug!("request->query_param called");
         self.query.get(name)
     }
 
     #[instrument]
     pub fn header(&self, name: &str) -> Option<&HeaderValue> {
-        trace!("request->trace called");
+        debug!("request->trace called");
         self.headers.get(name)
     }
 
     #[instrument]
     pub fn is_json(&self) -> bool {
-        trace!("request->is_json called");
+        debug!("request->is_json called");
         self.content_type().map(|ct| ct.0 == mime::APPLICATION_JSON).unwrap_or(false)
     }
 
     #[instrument]
     pub fn content_type(&self) -> Option<ContentType> {
-        trace!("request->content_type called");
+        debug!("request->content_type called");
         self.header("content-type").and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<mime::Mime>().ok()).map(ContentType)
     }
 
     #[instrument]
     pub fn text(&self) -> Result<String, Error> {
-        trace!("request->text called");
+        debug!("request->text called");
         String::from_utf8(self.body.clone()).map_err(|e| Error(format!("Failed to parse body as text: {}", e)))
     }
 
     #[instrument]
     pub fn json<T: serde::de::DeserializeOwned>(&self) -> Result<T, Error> {
-        trace!("request->json called");
+        debug!("request->json called");
         serde_json::from_slice(&self.body).map_err(|e| Error(format!("Failed to parse body as JSON: {}", e)))
     }
 }
 
 impl Response {
+    #[instrument]
     pub fn new() -> Self {
+        trace!("response->new called");
         Response {
             path: String::new(),
             status: StatusCode::Ok,
@@ -104,17 +106,25 @@ impl Response {
         }
     }
 
-    pub fn ok() -> Self { Self::new() }
+    #[instrument]
+    pub fn ok() -> Self {
+        trace!("response->ok called");
+        Self::new()
+    }
 
+    #[instrument]
     pub fn status(mut self, status: StatusCode) -> Self {
+        trace!("response->status called");
         self.status = status;
         self
     }
 
+    #[instrument]
     pub fn content_type<V>(&mut self, value: V) -> &mut Self
     where
-        V: TryIntoHeaderValue,
+        V: TryIntoHeaderValue + fmt::Debug,
     {
+        trace!("response->content_type called");
         match value.try_into_value() {
             Ok(value) => {
                 self.headers.insert(CONTENT_TYPE, value);
@@ -125,17 +135,26 @@ impl Response {
         self
     }
 
+    #[instrument]
     pub fn insert_header(mut self, header: (HeaderName, HeaderValue)) -> Self {
+        trace!("response->insert_header called");
         self.headers.insert(header.0, header.1);
         self
     }
 
-    pub fn body(mut self, body: impl Into<Vec<u8>>) -> Self {
+    #[instrument]
+    pub fn body(mut self, body: impl Into<Vec<u8>> + fmt::Debug) -> Self {
+        trace!("response->body called");
         self.body = body.into();
         self
     }
 
-    pub fn json<T: serde::Serialize>(mut self, value: &T) -> Result<Self, serde_json::Error> {
+    #[instrument(skip(value))]
+    pub fn json<T>(mut self, value: &T) -> Result<Self, serde_json::Error>
+    where
+        T: serde::Serialize,
+    {
+        trace!("response->json called");
         let body = serde_json::to_vec(value)?;
         self.content_type(ContentType::json());
         self.body = body;
@@ -143,14 +162,19 @@ impl Response {
         Ok(self)
     }
 
+    #[instrument]
     pub fn redirect(mut self, status: StatusCode, location: &str) -> Result<Self, Error> {
-        self.status = status;
-        self.headers.insert(LOCATION, HeaderValue::from_str(location)?);
-
+        trace!("response->redirect called");
+        self = crate::modules::redirect::create_redirect(self, status, location)?;
         Ok(self)
     }
 
-    pub async fn write_headers<W: AsyncWriteExt + Unpin>(&self, stream: &mut W) -> IoResult<()> {
+    #[instrument]
+    pub async fn write_headers<W>(&self, stream: &mut W) -> IoResult<()>
+    where
+        W: AsyncWriteExt + Unpin + fmt::Debug,
+    {
+        trace!("response->write_headers called");
         for (key, value) in self.headers.iter() {
             let header_name = key.as_str();
             let header_value = value
