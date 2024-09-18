@@ -1,6 +1,6 @@
 [package]
 name = "meow-editor"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 license = "MIT"
 description = "the meow text editor"
@@ -8,6 +8,7 @@ description = "the meow text editor"
 # build info
 build = "build.rs"
 exclude = ["languages"]
+include = ["languages.xz"]
 
 [[bin]]
 name = "meow"
