@@ -83,14 +83,18 @@ fn main() -> Result<()> {
     let profile = std::env::var("PROFILE").unwrap();
     let languages_dir = Path::new("languages");
 
+    match std::env::current_dir() {
+        Ok(current_dir) => println!("Current working directory: {:?}", current_dir),
+        Err(e) => println!("Failed to get current directory: {}", e),
+    }
+
+    for entry in fs::read_dir(languages_dir)? {
+        let entry = entry?;
+        println!("{:?}", entry.path());
+    }
+
     if profile.as_str() == "release" {
         extract_languages(languages_dir)?;
-
-        println!("Contents of languages directory:");
-        for entry in fs::read_dir(languages_dir)? {
-            let entry = entry?;
-            println!("{:?}", entry.path());
-        }
 
         let config = fs::read_to_string("languages.toml")?;
         let config: Config = toml::from_str(&config)?;
