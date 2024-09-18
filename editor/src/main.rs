@@ -4,6 +4,7 @@ mod editor;
 mod languages;
 mod macros;
 mod terminal;
+mod theme;
 mod ui;
 mod unicode;
 mod utils;
@@ -26,6 +27,7 @@ use crossterm::{
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},
+    sync::RwLock,
 };
 
 pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent) -> TerminalBuffer {
@@ -324,22 +326,34 @@ struct Args {
     #[arg(long, short, default_value_t = 4)]
     tab_width: usize,
 
+    /// Theme name
+    #[arg(long, short)]
+    theme: Option<String>,
+
     /// Whether to use relative line numbers
     #[arg(long, short)]
     relative_line_numbers: bool,
 }
 
+static THEME: RwLock<Option<String>> = RwLock::new(None);
+
 fn main() {
     let args = Args::parse();
 
-    let (file_content, newly_loaded) = match read_to_string(&args.file_path) {
+    let (file_content, is_newly_loaded) = match read_to_string(&args.file_path) {
         Ok(x) => (x, false),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (String::new(), true),
-        Err(e) => {
-            println!("Failed to open file: {:?}", e);
-            return;
-        }
+        Err(e) => return println!("Failed to open file: {:?}", e),
     };
 
-    terminal_main(file_content, newly_loaded, args.file_path, args.relative_line_numbers, args.tab_width, args.disable_mouse_interaction);
+    *THEME.write().expect("Able to write to THEME") = args.theme;
+
+    terminal_main(
+        file_content,
+        is_newly_loaded,
+        args.file_path,
+        args.relative_line_numbers,
+        args.tab_width,
+        args.disable_mouse_interaction,
+    )
 }

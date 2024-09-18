@@ -1,5 +1,5 @@
 use crate::unicode::{is_newline, move_grapheme};
-use crate::utils::*;
+use crate::{constants::HIGHLIGHT_NAMES, utils::*};
 
 use crossterm::style::{Attribute, Color};
 use ropey::{Rope, RopeSlice};
@@ -155,8 +155,7 @@ impl<L: LineLayout> TextEditor<L> {
                 for highlight in highlights {
                     for capture in highlight.captures {
                         let node = capture.node;
-                        let highlight_name = highlight_config.query.capture_names()[capture.index as usize];
-                        let color = tree_sitter_to_crossterm_color(highlight_name, &highlight_config.language_name, node);
+                        let color = tree_sitter_to_crossterm_color(capture.index as usize, highlight_config, node);
 
                         for i in node.start_byte()..node.end_byte() {
                             highlight_map.insert(i, color);
@@ -170,7 +169,7 @@ impl<L: LineLayout> TextEditor<L> {
     fn create_highlight_config(language: Language, highlights: (&str, &str, &str), name: &str) -> HighlightConfiguration {
         let (highlights, injections, tags) = highlights;
         let mut config = HighlightConfiguration::new(language, name, highlights, injections, tags).expect("Error creating highlight configuration");
-        config.configure(&["function", "keyword", "string", "comment", "variable", "type", "constant", "number", "operator", "property"]);
+        config.configure(HIGHLIGHT_NAMES);
         return config;
     }
 

@@ -6,12 +6,16 @@ build = "build.rs"
 
 [dependencies]
 ropey = "1.6.1"
+toml = "0.8.19"
+ahash = "0.8.11"
 cfg-if = "1.0.0"
 crossterm = "0.27.0"
+thiserror = "1.0.63"
 const_format = "0.2.33"
 unicode-width = "0.1.13"
 unicode-segmentation = "1.11.0"
 clap = { version = "4.5.17", features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
 
 # tree sitter
 tree-sitter = "0.23.0"

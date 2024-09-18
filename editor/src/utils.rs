@@ -1,9 +1,13 @@
 use crate::languages::{Config, Language};
+use crate::{constants, theme::Theme};
+
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
-use tree_sitter::Node;
 
-pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: Node) -> (Color, Option<Attribute>) {
+use tree_sitter::Node;
+use tree_sitter_highlight::HighlightConfiguration;
+
+pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
     crate::define_colors! {
         GREY => { r:142, g:178, b:217 },
         CYAN => { r:48, g:232, b:233 },
@@ -19,8 +23,23 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
         LIGHT_GREEN => { r:164, g:225, b:133 },
     };
 
+    if let Some(theme_name) = crate::THEME.read().expect("Failed to acquire read lock on theme").to_owned() {
+        match constants::from_token(theme_name) {
+            Some(theme) => {
+                let style = constants::HIGHLIGHT_NAMES[index];
+                let theme: Theme = Theme::get_theme(theme).unwrap();
+                let color = theme.get_style(style).and_then(|s| s.fg).unwrap_or(theme.fg);
+                return (Color::Rgb { r: color.r, g: color.g, b: color.b }, None);
+            }
+            None => {}
+        }
+    }
+
+    let lang = highlighter.language_name.to_owned();
+    let name = highlighter.query.capture_names()[index];
+
     if lang == "html" || lang == "jsx" || lang == "xml" || lang == "tsx" {
-        match highlight_name {
+        match name {
             "punctuation.special" => return (Colors::GREY, None),
             "variable.parameter" => return (Colors::MAGENTA, None),
             "tag" => return (Colors::GREEN, None),
@@ -58,7 +77,7 @@ pub fn tree_sitter_to_crossterm_color(highlight_name: &str, lang: &str, node: No
         "list_marker_minus" | "#{" => (Colors::GREY, None),
         "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (Colors::YELLOW, None),
         "mutable_specifier" => (Colors::CYAN, Some(Attribute::Italic)),
-        _ => match highlight_name {
+        _ => match name {
             "boolean" => (Colors::BLUE, None),
             "punctuation.special" | "text.title" => (Colors::ORANGE, None),
             "definition.module" => (Colors::BLUE, None),

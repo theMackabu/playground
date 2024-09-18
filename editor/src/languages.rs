@@ -1462,7 +1462,7 @@ impl Language {
             "scheme" => Some(Self::Scheme),
             "scm" => Some(Self::Scheme),
             "ss" => Some(Self::Scheme),
-            "scss" => Some(Self::Scss),
+            "scss" | "saas" => Some(Self::Scss),
             "sql" => Some(Self::Sql),
             "svelte" => Some(Self::Svelte),
             "swift" => Some(Self::Swift),
