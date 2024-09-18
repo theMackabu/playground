@@ -2,9 +2,12 @@
 name = "meow-editor"
 version = "0.0.3"
 edition = "2021"
-build = "build.rs"
 license = "MIT"
 description = "the meow text editor"
+
+# build info
+build = "build.rs"
+exclude = ["languages"]
 
 [[bin]]
 name = "meow"
@@ -36,6 +39,8 @@ tree-sitter-highlight = "0.23.0"
 
 [build-dependencies]
 cc = "*"
+xz2 = "*"
+tar = "*"
 toml = "*"
 anyhow = "*"
 serde = { version = "*", features = ["derive"] }
