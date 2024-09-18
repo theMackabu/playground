@@ -1,9 +1,10 @@
-use anyhow::Context;
+use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::fs::{self, File};
+use std::io::BufReader;
 use std::path::Path;
 use tar::Archive;
-use xz2::read::XzDecoder;
+use zstd::Decoder;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -16,7 +17,7 @@ pub struct Language {
 }
 
 impl Language {
-    pub fn compile(&self, languages_dir: &Path) {
+    pub fn compile(&self, languages_dir: &Path) -> Result<()> {
         let path = languages_dir.join(&self.name).join("src");
 
         let has_scanner = path.join("scanner.c").exists() || path.join("scanner.cc").exists();
@@ -51,6 +52,7 @@ impl Language {
         }
 
         build.compile(&format!("{}-parser", self.name));
+        Ok(())
     }
 }
 
@@ -58,37 +60,45 @@ fn rerun_if_changed(path: impl AsRef<Path>) {
     println!("cargo:rerun-if-changed={}", path.as_ref().to_str().unwrap());
 }
 
-fn extract_languages(languages_dir: &Path) -> anyhow::Result<()> {
+fn extract_languages(languages_dir: &Path) -> Result<()> {
     if languages_dir.exists() {
         println!("Languages directory already exists. Skipping extraction.");
         return Ok(());
     }
 
-    let languages_archive = Path::new("languages.xz");
-    let file = File::open(languages_archive).context("Failed to open languages.xz")?;
-    let xz_decoder = XzDecoder::new(file);
-    let mut archive = Archive::new(xz_decoder);
+    println!("Extracting languages...");
+    let languages_archive = Path::new("languages.tar.zst");
+    let file = File::open(languages_archive).context("Failed to open languages.tar.zst")?;
+    let zstd_decoder = Decoder::new(file)?;
+    let buf_reader = BufReader::new(zstd_decoder);
+    let mut archive = Archive::new(buf_reader);
 
-    archive.unpack(languages_dir).context("Failed to extract languages archive")?;
+    archive.unpack(".").context("Failed to extract languages archive")?;
 
+    println!("Extraction completed successfully.");
     Ok(())
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     let profile = std::env::var("PROFILE").unwrap();
     let languages_dir = Path::new("languages");
 
     if profile.as_str() == "release" {
         extract_languages(languages_dir)?;
 
-        let config = fs::read_to_string("languages.toml")?;
-        let config = toml::from_str::<Config>(&config)?;
-        let handles: Vec<_> = config.languages.into_iter().map(|lang| std::thread::spawn(move || lang.compile(&languages_dir))).collect();
+        println!("Contents of languages directory:");
+        for entry in fs::read_dir(languages_dir)? {
+            let entry = entry?;
+            println!("{:?}", entry.path());
+        }
 
-        for handle in handles {
-            handle.join().expect("Compilation thread should not panic")
+        let config = fs::read_to_string("languages.toml")?;
+        let config: Config = toml::from_str(&config)?;
+
+        for lang in config.languages {
+            lang.compile(languages_dir).with_context(|| format!("Failed to compile language: {}", lang.name))?;
         }
     }
 
-    Ok(println!("cargo:rerun-if-changed=languages.xz"))
+    Ok(println!("cargo:rerun-if-changed=languages.tar.zst"))
 }

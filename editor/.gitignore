@@ -3,5 +3,4 @@
 /fleet.toml
 /.cargo
 /*.log
-/languages.xz
-/languages.toml
+/languages.tar.zst

@@ -1,8 +1,8 @@
 [project]
 name = "meow-editor"
-version = "0.0.5"
+version = "0.1.1"
 
 [tasks]
 test.script = ["fleet run --release samples/sample.%{arg.1}"]
 install.script = "cargo install --path ."
-compress.script = "tar cJf languages.xz languages/*"
+compress.script = "tar cJf languages.tar.xz languages/*"
