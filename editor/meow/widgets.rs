@@ -1,5 +1,16 @@
 use std::sync::{LazyLock, Mutex};
 
+pub enum StatusBarItem {
+    FilePath(String),
+    SaveStatus(bool),
+    FileSize(String),
+    FileType(String),
+    LineEndingType(String),
+    FileEncoding(String),
+    Position { x: usize, y: usize },
+    ScrollPercentage(String),
+}
+
 #[derive(Copy, Clone)]
 pub struct LineNumbers {
     pub start: usize,
@@ -24,12 +35,8 @@ impl LineNumbers {
     }
 }
 
-pub struct TextLine<'a> {
-    pub string: &'a str,
-}
-
-impl<'a> TextLine<'a> {
-    pub fn new(string: &'a str) -> Self { Self { string } }
+pub struct StatusBar {
+    pub items: Vec<StatusBarItem>,
 }
 
 pub static COMMAND_LINE: LazyLock<Mutex<CommandLine>> = LazyLock::new(|| Mutex::new(CommandLine::default()));

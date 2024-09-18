@@ -31,67 +31,27 @@ use std::{
 };
 
 pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent) -> TerminalBuffer {
-    let (pos_x, pos_y) = {
-        let (x, y) = editor.get_row_and_column();
-        (x + 1, y + 1)
-    };
+    let lines = LineNumbers::new(editor.get_first_visible_line(), editor.len_lines(), editor.get_current_line() + 1, relative_line_numbers);
 
     let total_lines = editor.len_lines();
     let first_visible_line = editor.get_first_visible_line();
-    let last_visible_line = first_visible_line + height - 1;
-
-    let percent_scrolled = if first_visible_line == 0 {
-        "top".to_string()
-    } else if last_visible_line >= total_lines - 1 {
-        "end".to_string()
-    } else {
-        format!("{}%", ((first_visible_line as f64 / total_lines as f64) * 100.0).round())
-    };
-
     let buffer_size = editor.text.len_bytes();
+
     let file_size = match std::fs::metadata(filepath) {
         Ok(metadata) => metadata.len() as usize,
         Err(_) => 0,
     };
 
-    let file_size_str = if file_size < 1024 {
-        format!("{}b", file_size)
-    } else if file_size < 1024 * 1024 {
-        format!("{:.1}kb", file_size as f64 / 1024.0)
-    } else {
-        format!("{:.1}mb", file_size as f64 / (1024.0 * 1024.0))
-    };
-
-    let size_info = if buffer_size == file_size {
-        format!("({file_size_str})")
-    } else {
-        let diff = buffer_size - file_size;
-        let diff_str = if diff < 1024 {
-            format!("+{}b", diff)
-        } else if diff < 1024 * 1024 {
-            format!("+{:.1}kb", diff as f64 / 1024.0)
-        } else {
-            format!("+{:.1}mb", diff as f64 / (1024.0 * 1024.0))
-        };
-        format!("({}{})", file_size_str, diff_str)
-    };
-
-    let lines = LineNumbers::new(editor.get_first_visible_line(), editor.len_lines(), editor.get_current_line() + 1, relative_line_numbers);
-
-    let template = format!(
-        " {}{} {size_info} | ft:{} | {} | {}",
-        filepath.file_name().unwrap().to_string_lossy(),
-        if editor.has_changed_since_save() { "*" } else { "" },
-        utils::file_type(filepath),
-        editor.get_line_ending_type(),
-        editor.get_file_encoding(),
-    );
-
-    let position_status = format!("{pos_x}:{pos_y} | {percent_scrolled} ");
-    let padding_width = width.saturating_sub(template.len() + position_status.len());
-    let padding = " ".repeat(padding_width);
-    let status_bar_text = format!("{}{}{}", template, padding, position_status);
-    let status_bar = TextLine::new(&status_bar_text);
+    let status_bar = StatusBar::new()
+        .filepath(filepath)
+        .save_status(editor.has_changed_since_save())
+        .file_size(file_size, buffer_size)
+        .file_type(utils::file_type(filepath))
+        .line_ending_type(editor.get_line_ending_type().to_string())
+        .file_encoding(editor.get_file_encoding())
+        .position(editor.get_row_and_column())
+        .scroll_percentage(first_visible_line, total_lines, height)
+        .build();
 
     let events = Layout::new(width as u32, height as u32)
         .add_item(&CommandLine::get(), Align::Bottom, Restriction::Shrink)

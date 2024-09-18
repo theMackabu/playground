@@ -1,11 +1,27 @@
 use crate::languages::{Config, Language};
-use crate::{constants, theme::Theme};
+use crate::{constants, define_colors, theme::Theme};
 
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
 
 use tree_sitter::Node;
 use tree_sitter_highlight::HighlightConfiguration;
+
+define_colors! {
+    RED => { r:255, g:0, b: 0 },
+    GREY => { r:142, g:178, b:217 },
+    CYAN => { r:48, g:232, b:233 },
+    AQUA => { r:78, g:162, b:193 },
+    BLUE => { r:103, g:179, b:255 },
+    GREEN => { r: 45, g:232, b:170 },
+    PEACH => { r:244, g:170, b:163 },
+    YELLOW => { r:231, g:205, b:125 },
+    ORANGE => { r:255, g:139, b:126 },
+    MAGENTA => { r:205, g:162, b:244 },
+    DARK_GREY => { r:80, g:85, b:89 },
+    DARK_GREEN => { r:71, g:131, b:112 },
+    LIGHT_GREEN => { r:164, g:225, b:133 },
+}
 
 pub fn get_bg_color() -> Option<Color> {
     crate::THEME
@@ -22,22 +38,6 @@ pub fn get_bg_color() -> Option<Color> {
 }
 
 pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
-    crate::define_colors! {
-        RED => { r:255, g:0, b: 0 },
-        GREY => { r:142, g:178, b:217 },
-        CYAN => { r:48, g:232, b:233 },
-        AQUA => { r:78, g:162, b:193 },
-        BLUE => { r:103, g:179, b:255 },
-        GREEN => { r: 45, g:232, b:170 },
-        PEACH => { r:244, g:170, b:163 },
-        YELLOW => { r:231, g:205, b:125 },
-        ORANGE => { r:255, g:139, b:126 },
-        MAGENTA => { r:205, g:162, b:244 },
-        DARK_GREY => { r:80, g:85, b:89 },
-        DARK_GREEN => { r:71, g:131, b:112 },
-        LIGHT_GREEN => { r:164, g:225, b:133 },
-    };
-
     if let Some(theme_name) = crate::THEME.read().expect("Failed to acquire read lock on theme").to_owned() {
         match constants::from_token(theme_name) {
             Some(theme) => {
