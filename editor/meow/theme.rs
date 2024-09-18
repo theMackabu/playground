@@ -145,8 +145,6 @@ impl Color {
 
         Ok(Self { r, g, b })
     }
-
-    pub fn into_hex(&self) -> String { format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b) }
 }
 
 impl TryFrom<String> for Color {

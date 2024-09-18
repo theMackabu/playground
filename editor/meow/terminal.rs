@@ -110,12 +110,41 @@ impl Highlight {
         }
     }
 
-    pub fn get_color_background_crossterm(self) -> Color {
+    pub fn get_color_background_crossterm(self, bg_color: Option<Color>) -> Color {
+        let default_bg = Color::Rgb { r: 33, g: 33, b: 33 };
+        let base_color = bg_color.unwrap_or(default_bg);
+
         match self {
             Self::None => Color::Reset,
-            Self::Text => Color::Rgb { r: 33, g: 33, b: 33 },
-            Self::Selection => Color::Rgb { r: 50, g: 50, b: 50 },
-            Self::Gutter => Color::Rgb { r: 27, g: 28, b: 29 },
+            Self::Text => base_color,
+            Self::Selection => match base_color {
+                Color::Rgb { r, g, b } => {
+                    let brightness = (r as f32 * 0.299 + g as f32 * 0.587 + b as f32 * 0.114) / 255.0;
+
+                    if brightness > 0.5 {
+                        Color::Rgb {
+                            r: (r as f32 * 0.8) as u8,
+                            g: (g as f32 * 0.8) as u8,
+                            b: (b as f32 * 0.8) as u8,
+                        }
+                    } else {
+                        Color::Rgb {
+                            r: (r as u16 + 30).min(255) as u8,
+                            g: (g as u16 + 30).min(255) as u8,
+                            b: (b as u16 + 30).min(255) as u8,
+                        }
+                    }
+                }
+                _ => Color::Rgb { r: 50, g: 50, b: 50 },
+            },
+            Self::Gutter => match base_color {
+                Color::Rgb { r, g, b } => Color::Rgb {
+                    r: r.saturating_sub(6),
+                    g: g.saturating_sub(5),
+                    b: b.saturating_sub(4),
+                },
+                _ => Color::Rgb { r: 27, g: 28, b: 29 },
+            },
             Self::Status => Color::Rgb { r: 0, g: 0, b: 0 },
         }
     }
@@ -131,6 +160,8 @@ pub fn render(width: usize, cursor_position: Option<(usize, usize)>, buffer: &[C
     let mut prev_fg = Color::Reset;
     let mut prev_bg = Color::Reset;
 
+    let theme_bg = crate::utils::get_bg_color();
+
     queue!(stdout(), style::SetForegroundColor(Color::Reset), style::SetBackgroundColor(Color::Reset)).unwrap();
 
     for (_, c) in buffer.iter().enumerate() {
@@ -144,7 +175,7 @@ pub fn render(width: usize, cursor_position: Option<(usize, usize)>, buffer: &[C
                 None => (c.highlight.get_color_foreground_crossterm(), None),
             };
 
-            let bg = c.highlight.get_color_background_crossterm();
+            let bg = c.highlight.get_color_background_crossterm(theme_bg);
 
             match attr {
                 Some(attr) => queue!(stdout(), style::SetAttribute(attr)).unwrap(),

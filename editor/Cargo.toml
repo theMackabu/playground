@@ -1,8 +1,19 @@
 [package]
-name = "meow"
+name = "meow-editor"
 version = "0.0.3"
 edition = "2021"
 build = "build.rs"
+license = "MIT"
+description = "the meow text editor"
+
+[[bin]]
+name = "meow"
+path = "meow/entry.rs"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
 
 [dependencies]
 ropey = "1.6.1"

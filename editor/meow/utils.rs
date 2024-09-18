@@ -7,6 +7,20 @@ use std::path::Path;
 use tree_sitter::Node;
 use tree_sitter_highlight::HighlightConfiguration;
 
+pub fn get_bg_color() -> Option<Color> {
+    crate::THEME
+        .read()
+        .ok()?
+        .as_ref()
+        .and_then(|theme_name| constants::from_token(theme_name))
+        .and_then(|theme_token| Theme::get_theme(theme_token).ok())
+        .map(|theme| Color::Rgb {
+            r: theme.bg.r,
+            g: theme.bg.g,
+            b: theme.bg.b,
+        })
+}
+
 pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
     crate::define_colors! {
         RED => { r:255, g:0, b: 0 },
