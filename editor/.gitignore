@@ -4,3 +4,4 @@
 /.cargo
 /*.log
 /languages.xz
+/languages.toml

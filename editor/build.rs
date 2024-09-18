@@ -81,7 +81,7 @@ fn main() -> anyhow::Result<()> {
     if profile.as_str() == "release" {
         extract_languages(languages_dir)?;
 
-        let config = fs::read_to_string(languages_dir.join("index.toml"))?;
+        let config = fs::read_to_string("languages.toml")?;
         let config = toml::from_str::<Config>(&config)?;
         let handles: Vec<_> = config.languages.into_iter().map(|lang| std::thread::spawn(move || lang.compile(&languages_dir))).collect();
 
