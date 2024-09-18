@@ -179,6 +179,10 @@ name = "make"
 repo = "https://github.com/alemuller/tree-sitter-make"
 
 [[languages]]
+name = "markdown"
+repo = "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
+
+[[languages]]
 name = "matlab"
 repo = "https://github.com/acristoffers/tree-sitter-matlab"
 

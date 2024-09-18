@@ -720,6 +720,22 @@ pub mod make {
     pub fn config() -> Config { (LANGUAGE.into(), (HIGHLIGHT_QUERY, INJECTIONS_QUERY, LOCALS_QUERY), "make") }
 }
 
+pub mod markdown {
+    use super::Config;
+    use tree_sitter_language::LanguageFn;
+
+    extern "C" {
+        pub fn tree_sitter_markdown() -> *const ();
+    }
+
+    pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_markdown) };
+    pub const HIGHLIGHT_QUERY: &str = include_str!("../languages/markdown/queries/highlights.scm");
+    pub const INJECTIONS_QUERY: &str = include_str!("../languages/markdown/queries/injections.scm");
+    pub const LOCALS_QUERY: &str = "";
+
+    pub fn config() -> Config { (LANGUAGE.into(), (HIGHLIGHT_QUERY, INJECTIONS_QUERY, LOCALS_QUERY), "markdown") }
+}
+
 pub mod matlab {
     use super::Config;
     use tree_sitter_language::LanguageFn;
@@ -1307,6 +1323,7 @@ pub enum Language {
     Llvm,
     Lua,
     Make,
+    Markdown,
     Matlab,
     Meson,
     Nix,
@@ -1426,9 +1443,8 @@ impl Language {
             "tex" => Some(Self::Latex),
             "llvm" => Some(Self::Llvm),
             "lua" => Some(Self::Lua),
-            "make" => Some(Self::Make),
-            "mk" => Some(Self::Make),
-            "makefile" => Some(Self::Make),
+            "md" => Some(Self::Markdown),
+            "make" | "mk" | "makefile" => Some(Self::Make),
             "matlab" => Some(Self::Matlab),
             "m" => Some(Self::Matlab),
             "meson" => Some(Self::Meson),
@@ -1531,6 +1547,7 @@ impl Language {
             Self::Llvm => llvm::config(),
             Self::Lua => lua::config(),
             Self::Make => make::config(),
+            Self::Markdown => markdown::config(),
             Self::Matlab => matlab::config(),
             Self::Meson => meson::config(),
             Self::Nix => nix::config(),

@@ -100,10 +100,13 @@ pub enum Highlight {
 }
 
 impl Highlight {
-    pub fn get_color_foreground_crossterm(self) -> Color {
+    pub fn get_color_foreground_crossterm(self, fg_color: Option<Color>) -> Color {
+        let default_fg = Color::Reset;
+        let base_color = fg_color.unwrap_or(default_fg);
+
         match self {
-            Self::Text => Color::Reset,
-            Self::None => Color::Reset,
+            Self::Text => base_color,
+            Self::None => base_color,
             Self::Selection => Color::Black,
             Self::Gutter => Color::DarkGrey,
             Self::Status => Color::Rgb { r: 155, g: 155, b: 155 },
@@ -172,7 +175,7 @@ pub fn render(width: usize, cursor_position: Option<(usize, usize)>, buffer: &[C
 
             let (fg, attr) = match c.color {
                 Some(color) => color,
-                None => (c.highlight.get_color_foreground_crossterm(), None),
+                None => (c.highlight.get_color_foreground_crossterm(theme_bg), None),
             };
 
             let bg = c.highlight.get_color_background_crossterm(theme_bg);
