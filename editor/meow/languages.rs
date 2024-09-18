@@ -730,7 +730,7 @@ pub mod markdown {
 
     pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_markdown) };
     pub const HIGHLIGHT_QUERY: &str = include_str!("../languages/markdown/queries/highlights.scm");
-    pub const INJECTIONS_QUERY: &str = include_str!("../languages/markdown/queries/injections.scm");
+    pub const INJECTIONS_QUERY: &str = "";
     pub const LOCALS_QUERY: &str = "";
 
     pub fn config() -> Config { (LANGUAGE.into(), (HIGHLIGHT_QUERY, INJECTIONS_QUERY, LOCALS_QUERY), "markdown") }
