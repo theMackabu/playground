@@ -38,12 +38,12 @@ tree-sitter-language = "0.1.0"
 tree-sitter-highlight = "0.23.0"
 
 [build-dependencies]
-cc = "*"
-xz2 = "*"
-tar = "*"
-toml = "*"
-anyhow = "*"
-serde = { version = "*", features = ["derive"] }
+cc = "1"
+xz2 = "0.1"
+tar = "0.4"
+toml = "0.8"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
 arboard = { version = "3.4.1", features = ["wayland-data-control"] }
