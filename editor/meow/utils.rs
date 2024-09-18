@@ -1,13 +1,11 @@
 use crate::languages::{Config, Language};
-use crate::{constants, define_colors};
 
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
-
 use tree_sitter::Node;
 use tree_sitter_highlight::HighlightConfiguration;
 
-define_colors! {
+crate::define_colors! {
     RED => { r:255, g:0, b: 0 },
     GREY => { r:142, g:178, b:217 },
     CYAN => { r:48, g:232, b:233 },
@@ -24,10 +22,10 @@ define_colors! {
 }
 
 pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
-    if let Some(theme) = crate::THEME.read().expect("Failed to acquire read lock on theme").to_owned() {
-        let style = constants::HIGHLIGHT_NAMES[index];
-        let color = theme.get_style(style).and_then(|s| s.fg).unwrap_or(theme.fg);
-        return (Color::Rgb { r: color.r, g: color.g, b: color.b }, None);
+    if let Ok(theme) = crate::HIGHLIGHT_COLORS.read() {
+        if !theme.is_empty() && index < theme.len() {
+            return (theme[index], None);
+        }
     }
 
     let lang = highlighter.language_name.to_owned();

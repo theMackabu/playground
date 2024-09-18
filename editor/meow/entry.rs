@@ -298,6 +298,8 @@ struct Args {
 }
 
 static THEME: RwLock<Option<Theme>> = RwLock::new(None);
+static HIGHLIGHT_COLORS: RwLock<Vec<Color>> = RwLock::new(Vec::new());
+
 static BG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 33, g: 33, b: 33 });
 static FG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 255, g: 255, b: 255 });
 
@@ -314,17 +316,29 @@ fn main() {
         if let Some(theme) = constants::from_token(&theme_name) {
             *THEME.write().expect("Able to write to THEME") = match Theme::get_theme(theme) {
                 Ok(data) => {
-                    *BG_COLOR.write().expect("Able to write to BG_COLOR") = Color::Rgb {
+                    let mut bg_hook = BG_COLOR.write().expect("Able to write to BG_COLOR");
+                    let mut fg_hook = FG_COLOR.write().expect("Able to write to FG_COLOR");
+                    let mut hl_hook = HIGHLIGHT_COLORS.write().expect("Failed to acquire write lock on HIGHLIGHT_COLORS");
+
+                    *bg_hook = Color::Rgb {
                         r: data.bg.r,
                         g: data.bg.g,
                         b: data.bg.b,
                     };
 
-                    *FG_COLOR.write().expect("Able to write to FG_COLOR") = Color::Rgb {
+                    *fg_hook = Color::Rgb {
                         r: data.fg.r,
                         g: data.fg.g,
                         b: data.fg.b,
                     };
+
+                    *hl_hook = constants::HIGHLIGHT_NAMES
+                        .iter()
+                        .map(|&style| {
+                            let color = data.get_style(style).and_then(|s| s.fg).unwrap_or(data.fg);
+                            Color::Rgb { r: color.r, g: color.g, b: color.b }
+                        })
+                        .collect();
 
                     Some(data)
                 }
