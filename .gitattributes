@@ -1,6 +1,7 @@
 # ignore all C/C++ source files
 *.c linguist-detectable=false
 *.h linguist-detectable=false
+*.cc linguist-detectable=false
 *.cpp linguist-detectable=false
 *.hpp linguist-detectable=false
 *.cxx linguist-detectable=false
@@ -13,3 +14,6 @@
 
 # hide all editor samples
 editor/samples/** linguist-generated=true
+
+# ignore all scheme files
+*.scm linguist-detectable=false
