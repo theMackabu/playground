@@ -15,12 +15,14 @@ use clap::Parser;
 use clipboard::Clipboard;
 use editor::*;
 use terminal::*;
+use theme::Theme;
 use ui::*;
 use widgets::*;
 use widgets_impl::*;
 
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
+    style::Color,
     terminal::size,
 };
 
@@ -287,7 +289,7 @@ struct Args {
     tab_width: usize,
 
     /// Theme name
-    #[arg(long, short)]
+    #[arg(long, short = 's')]
     theme: Option<String>,
 
     /// Whether to use relative line numbers
@@ -295,7 +297,9 @@ struct Args {
     relative_line_numbers: bool,
 }
 
-static THEME: RwLock<Option<String>> = RwLock::new(None);
+static THEME: RwLock<Option<Theme>> = RwLock::new(None);
+static BG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 33, g: 33, b: 33 });
+static FG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 255, g: 255, b: 255 });
 
 fn main() {
     let args = Args::parse();
@@ -306,7 +310,28 @@ fn main() {
         Err(e) => return println!("Failed to open file: {:?}", e),
     };
 
-    *THEME.write().expect("Able to write to THEME") = args.theme;
+    if let Some(theme_name) = args.theme {
+        if let Some(theme) = constants::from_token(&theme_name) {
+            *THEME.write().expect("Able to write to THEME") = match Theme::get_theme(theme) {
+                Ok(data) => {
+                    *BG_COLOR.write().expect("Able to write to BG_COLOR") = Color::Rgb {
+                        r: data.bg.r,
+                        g: data.bg.g,
+                        b: data.bg.b,
+                    };
+
+                    *FG_COLOR.write().expect("Able to write to FG_COLOR") = Color::Rgb {
+                        r: data.fg.r,
+                        g: data.fg.g,
+                        b: data.fg.b,
+                    };
+
+                    Some(data)
+                }
+                Err(_) => None,
+            };
+        }
+    }
 
     terminal_main(
         file_content,

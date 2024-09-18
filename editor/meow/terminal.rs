@@ -100,27 +100,20 @@ pub enum Highlight {
 }
 
 impl Highlight {
-    pub fn get_color_foreground_crossterm(self, fg_color: Option<Color>) -> Color {
-        let default_fg = Color::Reset;
-        let base_color = fg_color.unwrap_or(default_fg);
-
+    pub fn get_color_foreground_crossterm(self, fg_color: Color) -> Color {
         match self {
-            Self::Text => base_color,
-            Self::None => base_color,
+            Self::Text => fg_color,
             Self::Selection => Color::Black,
             Self::Gutter => Color::DarkGrey,
             Self::Status => Color::Rgb { r: 155, g: 155, b: 155 },
+            Self::None => Color::Reset,
         }
     }
 
-    pub fn get_color_background_crossterm(self, bg_color: Option<Color>) -> Color {
-        let default_bg = Color::Rgb { r: 33, g: 33, b: 33 };
-        let base_color = bg_color.unwrap_or(default_bg);
-
+    pub fn get_color_background_crossterm(self, bg_color: Color) -> Color {
         match self {
-            Self::None => Color::Reset,
-            Self::Text => base_color,
-            Self::Selection => match base_color {
+            Self::Text => bg_color,
+            Self::Selection => match bg_color {
                 Color::Rgb { r, g, b } => {
                     let brightness = (r as f32 * 0.299 + g as f32 * 0.587 + b as f32 * 0.114) / 255.0;
 
@@ -140,7 +133,7 @@ impl Highlight {
                 }
                 _ => Color::Rgb { r: 50, g: 50, b: 50 },
             },
-            Self::Gutter => match base_color {
+            Self::Gutter => match bg_color {
                 Color::Rgb { r, g, b } => Color::Rgb {
                     r: r.saturating_sub(6),
                     g: g.saturating_sub(5),
@@ -149,6 +142,7 @@ impl Highlight {
                 _ => Color::Rgb { r: 27, g: 28, b: 29 },
             },
             Self::Status => Color::Rgb { r: 0, g: 0, b: 0 },
+            Self::None => Color::Reset,
         }
     }
 }
@@ -160,12 +154,14 @@ pub fn render(width: usize, cursor_position: Option<(usize, usize)>, buffer: &[C
     let mut prev_y = 0;
     let mut prev_chars = previous_buffer.iter().peekable();
     let mut force_move = true;
-    let mut prev_fg = Color::Reset;
-    let mut prev_bg = Color::Reset;
 
-    let theme_bg = crate::utils::get_bg_color();
+    let bg_color = *crate::BG_COLOR.read().expect("Able to read BG_COLOR");
+    let fg_color = *crate::FG_COLOR.read().expect("Able to read FG_COLOR");
 
-    queue!(stdout(), style::SetForegroundColor(Color::Reset), style::SetBackgroundColor(Color::Reset)).unwrap();
+    let mut prev_fg = fg_color;
+    let mut prev_bg = bg_color;
+
+    queue!(stdout(), style::SetForegroundColor(fg_color), style::SetBackgroundColor(bg_color)).unwrap();
 
     for (_, c) in buffer.iter().enumerate() {
         if x != prev_x || y != prev_y || Some(&c) != prev_chars.peek() {
@@ -175,10 +171,10 @@ pub fn render(width: usize, cursor_position: Option<(usize, usize)>, buffer: &[C
 
             let (fg, attr) = match c.color {
                 Some(color) => color,
-                None => (c.highlight.get_color_foreground_crossterm(theme_bg), None),
+                None => (c.highlight.get_color_foreground_crossterm(fg_color), None),
             };
 
-            let bg = c.highlight.get_color_background_crossterm(theme_bg);
+            let bg = c.highlight.get_color_background_crossterm(bg_color);
 
             match attr {
                 Some(attr) => queue!(stdout(), style::SetAttribute(attr)).unwrap(),

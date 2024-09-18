@@ -1,5 +1,5 @@
 use crate::constants::HIGHLIGHT_NAMES;
-use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use ahash::{HashMap, HashMapExt};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -11,10 +11,6 @@ pub enum Error {
     InvalidHexCode(String),
     #[error("malformed hex byte: {0}")]
     InvalidHexByte(#[from] std::num::ParseIntError),
-    #[error("invalid underline style: {0}")]
-    InvalidUnderlineStyle(String),
-    #[error("invalid modifier: {0}")]
-    InvalidModifier(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -30,73 +26,6 @@ pub struct Theme {
 pub struct Style {
     pub fg: Option<Color>,
     pub bg: Option<Color>,
-    pub underline: Option<Underline>,
-    pub modifiers: HashSet<Modifier>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Underline {
-    pub color: Option<Color>,
-    pub style: Option<UnderlineStyle>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(try_from = "String")]
-pub enum UnderlineStyle {
-    Line,
-    Curl,
-    Dashed,
-    Dotted,
-    Double,
-}
-
-impl TryFrom<String> for UnderlineStyle {
-    type Error = Error;
-
-    fn try_from(value: String) -> Result<Self> {
-        match value.as_str() {
-            "line" => Ok(Self::Line),
-            "curl" => Ok(Self::Curl),
-            "dashed" => Ok(Self::Dotted),
-            "dotted" => Ok(Self::Dashed),
-            "double_line" => Ok(Self::Double),
-            _ => Err(Error::InvalidUnderlineStyle(value.to_string())),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
-#[serde(try_from = "String")]
-pub enum Modifier {
-    Bold,
-    Dim,
-    Italic,
-    Underlined,
-    SlowBlink,
-    FastBlink,
-    Reversed,
-    Strikethrough,
-    Normal,
-}
-
-impl TryFrom<String> for Modifier {
-    type Error = Error;
-
-    fn try_from(value: String) -> Result<Self> {
-        match value.as_str() {
-            "bold" => Ok(Self::Bold),
-            "dim" => Ok(Self::Dim),
-            "italic" => Ok(Self::Italic),
-            "underlined" => Ok(Self::Underlined),
-            "slow_blink" => Ok(Self::SlowBlink),
-            "rapid_blink" => Ok(Self::FastBlink),
-            "reversed" => Ok(Self::Reversed),
-            "hidden" => Ok(Self::Strikethrough),
-            "crossed_out" => Ok(Self::Strikethrough),
-            "normal" => Ok(Self::Normal),
-            _ => Err(Error::InvalidModifier(value.to_string())),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
@@ -158,22 +87,10 @@ impl Theme {
 
     pub fn get_theme(data: &str) -> Result<Self> {
         #[derive(Debug, Clone, Deserialize)]
-        struct RawUnderline {
-            pub color: Option<String>,
-            pub style: Option<UnderlineStyle>,
-        }
-
-        #[derive(Debug, Clone, Deserialize)]
         #[serde(untagged)]
         enum RawStyle {
             Simple(String),
-            Complex {
-                fg: Option<String>,
-                bg: Option<String>,
-                underline: Option<RawUnderline>,
-                #[serde(default)]
-                modifiers: HashSet<Modifier>,
-            },
+            Complex { fg: Option<String>, bg: Option<String> },
         }
 
         #[derive(Debug, Clone, Deserialize)]
@@ -203,7 +120,7 @@ impl Theme {
                     fg: raw.dereference_color(s)?.into(),
                     ..Default::default()
                 }),
-                RawStyle::Complex { fg, bg, underline, modifiers } => {
+                RawStyle::Complex { fg, bg } => {
                     let fg = match fg {
                         Some(s) => raw.dereference_color(s)?.into(),
                         None => None,
@@ -214,21 +131,7 @@ impl Theme {
                         None => None,
                     };
 
-                    let underline = match underline {
-                        Some(r) => {
-                            let color = match r.color.as_deref() {
-                                Some(c) => raw.dereference_color(c)?.into(),
-                                None => None,
-                            };
-
-                            Underline { color, style: r.style }.into()
-                        }
-                        None => None,
-                    };
-
-                    let modifiers = modifiers.to_owned();
-
-                    Ok(Style { fg, bg, underline, modifiers })
+                    Ok(Style { fg, bg })
                 }
             }
         };
@@ -278,8 +181,6 @@ impl Default for Style {
         Self {
             fg: Color::new(0, 0, 0).into(),
             bg: None,
-            underline: None,
-            modifiers: HashSet::new(),
         }
     }
 }

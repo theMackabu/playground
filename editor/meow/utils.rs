@@ -1,5 +1,5 @@
 use crate::languages::{Config, Language};
-use crate::{constants, define_colors, theme::Theme};
+use crate::{constants, define_colors};
 
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
@@ -23,31 +23,11 @@ define_colors! {
     LIGHT_GREEN => { r:164, g:225, b:133 },
 }
 
-pub fn get_bg_color() -> Option<Color> {
-    crate::THEME
-        .read()
-        .ok()?
-        .as_ref()
-        .and_then(|theme_name| constants::from_token(theme_name))
-        .and_then(|theme_token| Theme::get_theme(theme_token).ok())
-        .map(|theme| Color::Rgb {
-            r: theme.bg.r,
-            g: theme.bg.g,
-            b: theme.bg.b,
-        })
-}
-
 pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
-    if let Some(theme_name) = crate::THEME.read().expect("Failed to acquire read lock on theme").to_owned() {
-        match constants::from_token(theme_name) {
-            Some(theme) => {
-                let style = constants::HIGHLIGHT_NAMES[index];
-                let theme: Theme = Theme::get_theme(theme).unwrap();
-                let color = theme.get_style(style).and_then(|s| s.fg).unwrap_or(theme.fg);
-                return (Color::Rgb { r: color.r, g: color.g, b: color.b }, None);
-            }
-            None => {}
-        }
+    if let Some(theme) = crate::THEME.read().expect("Failed to acquire read lock on theme").to_owned() {
+        let style = constants::HIGHLIGHT_NAMES[index];
+        let color = theme.get_style(style).and_then(|s| s.fg).unwrap_or(theme.fg);
+        return (Color::Rgb { r: color.r, g: color.g, b: color.b }, None);
     }
 
     let lang = highlighter.language_name.to_owned();

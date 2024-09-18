@@ -49,7 +49,7 @@ impl<'a> Drawable<TerminalBuffer> for CommandLine<'a> {
                         None
                     }
                 })
-                .map(|c| Char::new(c, None, Highlight::None))
+                .map(|c| Char::new(c, Some((Color::White, None)), Highlight::None))
                 .collect(),
             None,
         )
@@ -164,7 +164,8 @@ impl Drawable<TerminalBuffer> for TextEditor<TermLineLayoutSettings> {
                                 .map(|x| Char::new_text(x, Some((Color::White, None)), selection_range.contains(&(cursor + line_start)))),
                         );
                     } else if column >= self.get_columns_scrolled() && column + grapheme_width <= self.get_columns_scrolled() + width as usize {
-                        let color = highlight_map.get(&(cursor + line_start)).copied().unwrap_or((Color::Reset, None));
+                        let fg_color = *crate::FG_COLOR.read().expect("Able to read FG_COLOR");
+                        let color = highlight_map.get(&(cursor + line_start)).copied().unwrap_or((fg_color, None));
 
                         if grapheme.chars().eq(std::iter::once('\t')) {
                             buffer.extend(
@@ -377,10 +378,10 @@ impl Drawable<TerminalBuffer> for StatusBarDrawable {
                 StatusBarItem::FilePath(path) => (format!(" {path}"), Some((Color::Reset, None)), false),
                 StatusBarItem::SaveStatus(changed) => (if *changed { "* " } else { " " }.to_string(), Some((Color::Red, None)), false),
                 StatusBarItem::FileSize(size) => (size.to_owned(), Some((default_color, None)), true),
-                StatusBarItem::FileType(ft) => (format!("ft:{}", ft), Some((Colors::LIGHT_GREEN, None)), true),
-                StatusBarItem::LineEndingType(le) => (le.to_owned(), Some((Colors::YELLOW, None)), true),
-                StatusBarItem::FileEncoding(enc) => (enc.to_owned(), Some((Colors::MAGENTA, None)), false),
-                StatusBarItem::Position { x, y } => (format!("{}:{}", x, y), Some((Colors::CYAN, None)), true),
+                StatusBarItem::FileType(ft) => (format!("ft:{}", ft), Some((Colors::PEACH, None)), true),
+                StatusBarItem::LineEndingType(le) => (le.to_owned(), Some((Colors::LIGHT_GREEN, None)), true),
+                StatusBarItem::FileEncoding(enc) => (enc.to_owned(), Some((Colors::BLUE, None)), false),
+                StatusBarItem::Position { x, y } => (format!("{}:{}", x, y), Some((Colors::MAGENTA, None)), true),
                 StatusBarItem::ScrollPercentage(fmt) => (fmt.to_owned(), Some((default_color, None)), false),
             };
 
