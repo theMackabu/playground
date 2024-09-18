@@ -9,6 +9,7 @@ use tree_sitter_highlight::HighlightConfiguration;
 
 pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
     crate::define_colors! {
+        RED => { r:255, g:0, b: 0 },
         GREY => { r:142, g:178, b:217 },
         CYAN => { r:48, g:232, b:233 },
         AQUA => { r:78, g:162, b:193 },
@@ -78,6 +79,8 @@ pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfi
         "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (Colors::YELLOW, None),
         "mutable_specifier" => (Colors::CYAN, Some(Attribute::Italic)),
         _ => match name {
+            "diff.minus" => (Colors::RED, None),
+            "diff.plus" => (Colors::GREEN, None),
             "boolean" => (Colors::BLUE, None),
             "punctuation.special" | "text.title" => (Colors::ORANGE, None),
             "definition.module" => (Colors::BLUE, None),

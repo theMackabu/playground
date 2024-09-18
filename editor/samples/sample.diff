@@ -1,0 +1,35 @@
+diff --git a/src/example.py b/src/example.py
+index a123456..b789012 100644
+--- a/src/example.py
++++ b/src/example.py
+@@ -1,15 +1,20 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+-import sys
++import sys
++import logging
+ 
+ def greet(name):
+-    print("Hello, " + name + "!")
++    """
++    Greet a person by name.
++    """
++    print(f"Hello, {name}!")
+ 
+-def main():
+-    if len(sys.argv) > 1:
+-        greet(sys.argv[1])
+-    else:
++def main():
++    logging.basicConfig(level=logging.INFO)
++    if len(sys.argv) <= 1:
++        logging.warning("No name provided.")
+			print("Please provide a name.")
++        return
++    greet(sys.argv[1])
+ 
+-if __name__ == "__main__":
+-    main()
++if __name__ == "__main__":
++    main()
