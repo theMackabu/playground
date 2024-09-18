@@ -88,7 +88,7 @@ fn main() -> Result<()> {
         Err(e) => println!("Failed to get current directory: {}", e),
     }
 
-    for entry in fs::read_dir(languages_dir)? {
+    for entry in fs::read_dir(".")? {
         let entry = entry?;
         println!("{:?}", entry.path());
     }
