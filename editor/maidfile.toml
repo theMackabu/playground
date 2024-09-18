@@ -5,4 +5,4 @@ version = "1.0.1"
 [tasks]
 test.script = ["fleet run --release samples/sample.%{arg.1}"]
 install.script = "cargo install --path ."
-compress.script = "tar cJf languages.tar.xz languages/*"
+compress.script = "gtar -I 'zstd -19' -cvpf languages.tar.zst languages"
