@@ -1,6 +1,6 @@
 [package]
 name = "meow-editor"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 license = "MIT"
 description = "the meow text editor"
@@ -20,11 +20,11 @@ opt-level = 3
 codegen-units = 1
 
 [dependencies]
+home = "0.5.9"
 ropey = "1.6.1"
 toml = "0.8.19"
 ahash = "0.8.11"
 cfg-if = "1.0.0"
-macros-rs = "1.4.1"
 crossterm = "0.27.0"
 thiserror = "1.0.63"
 const_format = "0.2.33"
@@ -37,6 +37,7 @@ serde = { version = "1.0.210", features = ["derive"] }
 tree-sitter = "0.23.0"
 tree-sitter-language = "0.1.0"
 tree-sitter-highlight = "0.23.0"
+
 
 [build-dependencies]
 cc = "1"

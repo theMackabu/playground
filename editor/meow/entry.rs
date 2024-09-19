@@ -1,4 +1,5 @@
 mod clipboard;
+mod config;
 mod constants;
 mod editor;
 mod languages;
@@ -22,7 +23,7 @@ use widgets_impl::*;
 
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
-    style::Color,
+    style::{Color, Stylize},
     terminal::size,
 };
 
@@ -31,6 +32,9 @@ use std::{
     path::{Path, PathBuf},
     sync::RwLock,
 };
+
+const PINK: Color = Color::Rgb { r: 226, g: 73, b: 210 };
+const BRIGHT_PINK: Color = Color::Rgb { r: 226, g: 145, b: 210 };
 
 pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent) -> TerminalBuffer {
     let lines = LineNumbers::new(editor.get_first_visible_line(), editor.len_lines(), editor.get_current_line() + 1, relative_line_numbers);
@@ -82,15 +86,23 @@ pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSetting
     buffer
 }
 
-fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, relative_line_numbers: bool, tab_width: usize, disable_mouse_interaction: bool) {
+fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
+    let Parsed {
+        file_path,
+        relative_line_numbers,
+        tab_width,
+        disable_mouse_interaction,
+        ..
+    } = args;
+
     setup_terminal(disable_mouse_interaction);
 
     let (mut width, mut height) = size().unwrap();
-    let mut editor = TextEditor::new(&file_content, TermLineLayoutSettings::new(tab_width), tab_width, newly_loaded, &save_path);
+    let mut editor = TextEditor::new(&file_content, TermLineLayoutSettings::new(tab_width), tab_width, newly_loaded, &file_path);
     let mut clip = String::new();
     let mut system_clip = Clipboard::new().ok();
 
-    let (mut current_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers, UiEvent::Nothing);
+    let (mut current_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing);
 
     render(width as usize, cursor_position, &current_buffer, &[]);
 
@@ -104,7 +116,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, r
                         &mut editor,
                         width as usize,
                         height as usize,
-                        &save_path,
+                        &file_path,
                         relative_line_numbers,
                         UiEvent::Clicked(column as usize, row as usize, kind == MouseEventKind::Drag(MouseButton::Left)),
                     );
@@ -116,7 +128,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, r
                 Event::Key(KeyEvent { code, modifiers, .. }) => {
                     if code == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL {
                         if editor.has_changed_since_save() {
-                            match prompt_save(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers) {
+                            match prompt_save(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers) {
                                 SavePromptResult::Save => {
                                     break;
                                 }
@@ -137,7 +149,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, r
                     if code == KeyCode::Char('s') && modifiers == KeyModifiers::CONTROL {
                         let string = editor.to_string();
 
-                        if std::fs::create_dir_all(save_path.as_path().parent().unwrap()).is_ok() && std::fs::write(save_path.as_path(), string).is_ok() {
+                        if std::fs::create_dir_all(file_path.as_path().parent().unwrap()).is_ok() && std::fs::write(file_path.as_path(), string).is_ok() {
                             editor.set_saved();
                         }
                     } else if code == KeyCode::Char('a') && modifiers == KeyModifiers::CONTROL {
@@ -214,20 +226,20 @@ fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, r
                         editor.remove_character_or_selection_at_cursor(false);
                     }
 
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers, ui_event);
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, ui_event);
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
 
                     current_buffer = next_buffer;
                 }
 
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollUp, .. }) => {
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers, UiEvent::ScrollBy(-1));
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(-1));
 
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
                     current_buffer = next_buffer;
                 }
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollDown, .. }) => {
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers, UiEvent::ScrollBy(1));
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(1));
 
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
                     current_buffer = next_buffer;
@@ -237,7 +249,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, save_path: PathBuf, r
                     width = size().unwrap().0;
                     height = size().unwrap().1;
 
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &save_path, relative_line_numbers, UiEvent::Nothing);
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing);
                     render(width as usize, cursor_position, &next_buffer, &[]);
 
                     current_buffer = next_buffer;
@@ -282,12 +294,12 @@ struct Args {
     file_path: Option<PathBuf>,
 
     /// Whether to allow mouse navigation
-    #[arg(long, short, default_value_t = false)]
-    disable_mouse_interaction: bool,
+    #[arg(long, short)]
+    disable_mouse_interaction: Option<bool>,
 
     /// Tab width
-    #[arg(long, short, default_value_t = 4)]
-    tab_width: usize,
+    #[arg(long, short)]
+    tab_width: Option<usize>,
 
     /// Theme name
     #[arg(long, short = 's')]
@@ -295,11 +307,19 @@ struct Args {
 
     /// Whether to use relative line numbers
     #[arg(long, short)]
-    relative_line_numbers: bool,
+    relative_line_numbers: Option<bool>,
 
     /// List available themes
     #[arg(long)]
     list_themes: bool,
+}
+
+struct Parsed {
+    file_path: PathBuf,
+    disable_mouse_interaction: bool,
+    tab_width: usize,
+    theme: Option<String>,
+    relative_line_numbers: bool,
 }
 
 static THEME: RwLock<Option<Theme>> = RwLock::new(None);
@@ -309,26 +329,33 @@ static BG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 33, g: 33, b: 33 })
 static FG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 255, g: 255, b: 255 });
 
 fn main() {
+    let config = config::load();
     let args = Args::parse();
 
     if args.list_themes {
-        println!("Available themes:");
+        println!("{}", "Available themes:".with(PINK));
         for theme in constants::list() {
-            println!("  {}", theme);
+            println!("  {}", theme.with(BRIGHT_PINK));
         }
         return;
     }
 
-    let file_path = args.file_path.unwrap();
-
-    let (file_content, is_newly_loaded) = match read_to_string(&file_path.to_owned()) {
-        Ok(x) => (x, false),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (String::new(), true),
-        Err(e) => return println!("Failed to open file: {:?}", e),
+    let args = Parsed {
+        file_path: args.file_path.unwrap(),
+        theme: args.theme.or(config.theme),
+        tab_width: args.tab_width.or(config.tab_width).unwrap_or(4),
+        relative_line_numbers: args.relative_line_numbers.or(config.relative_line_numbers).unwrap_or(false),
+        disable_mouse_interaction: args.disable_mouse_interaction.or(config.disable_mouse_interaction).unwrap_or(false),
     };
 
-    if let Some(theme_name) = args.theme {
-        if let Some(theme) = constants::from_token(&theme_name) {
+    let (file_content, is_newly_loaded) = match read_to_string(&args.file_path.to_owned()) {
+        Ok(x) => (x, false),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (String::new(), true),
+        Err(e) => return eprintln!("{}", format!("Failed to open file: {e:?}").with(Color::Red)),
+    };
+
+    if let Some(name) = args.theme.to_owned() {
+        if let Some(theme) = constants::from_token(&name) {
             *THEME.write().expect("Able to write to THEME") = match Theme::get_theme(theme) {
                 Ok(data) => {
                     let mut bg_hook = BG_COLOR.write().expect("Able to write to BG_COLOR");
@@ -362,12 +389,5 @@ fn main() {
         }
     }
 
-    terminal_main(
-        file_content,
-        is_newly_loaded,
-        file_path.to_owned(),
-        args.relative_line_numbers,
-        args.tab_width,
-        args.disable_mouse_interaction,
-    )
+    terminal_main(file_content, is_newly_loaded, args)
 }
