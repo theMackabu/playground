@@ -88,39 +88,52 @@ impl<L: LineLayout> TextEditor<L> {
     }
 
     pub fn update_tree(&mut self, start_byte: usize, old_end_byte: usize, new_end_byte: usize) {
-        if start_byte > self.text.len_bytes() || old_end_byte > self.text.len_bytes() || new_end_byte > self.text.len_bytes() {
+        let text_len = self.text.len_bytes();
+
+        let start_byte = start_byte.min(text_len);
+        let old_end_byte = old_end_byte.min(text_len);
+        let new_end_byte = new_end_byte.min(text_len);
+
+        if start_byte > text_len || old_end_byte > text_len || new_end_byte > text_len {
             return;
         }
 
         if let Some(highlight_config) = &self.highlight_config {
             let start_line = self.text.byte_to_line(start_byte);
-            let start_column = start_byte - self.text.line_to_byte(start_line);
+            let start_column = start_byte.saturating_sub(self.text.line_to_byte(start_line));
             let start_position = tree_sitter::Point::new(start_line, start_column);
 
             let old_end_line = self.text.byte_to_line(old_end_byte);
-            let old_end_column = old_end_byte - self.text.line_to_byte(old_end_line);
+            let old_end_column = old_end_byte.saturating_sub(self.text.line_to_byte(old_end_line));
             let old_end_position = tree_sitter::Point::new(old_end_line, old_end_column);
 
             let new_end_position = if new_end_byte < old_end_byte {
-                let deleted_slice = self.text.slice(self.text.byte_to_char(new_end_byte)..self.text.byte_to_char(old_end_byte));
+                let deleted_start = self.text.byte_to_char(new_end_byte);
+                let deleted_end = self.text.byte_to_char(old_end_byte);
+
+                if deleted_start >= deleted_end {
+                    return;
+                }
+
+                let deleted_slice = self.text.slice(deleted_start.min(deleted_end)..deleted_end);
                 let deleted_lines = deleted_slice.lines().count();
                 let last_line_len = deleted_slice.lines().last().map_or(0, |line| line.len_chars());
 
                 if deleted_lines == 0 {
-                    tree_sitter::Point::new(start_line, start_column + (new_end_byte - start_byte))
+                    tree_sitter::Point::new(start_line, start_column.saturating_add(new_end_byte.saturating_sub(start_byte)))
                 } else {
                     tree_sitter::Point::new(
-                        start_line + deleted_lines - 1,
+                        start_line.saturating_add(deleted_lines.saturating_sub(1)),
                         if deleted_lines == 1 {
-                            start_column + (new_end_byte - start_byte)
+                            start_column.saturating_add(new_end_byte.saturating_sub(start_byte))
                         } else {
-                            old_end_column - last_line_len + (new_end_byte - start_byte)
+                            old_end_column.saturating_sub(last_line_len).saturating_add(new_end_byte.saturating_sub(start_byte))
                         },
                     )
                 }
             } else {
                 let new_end_line = self.text.byte_to_line(new_end_byte);
-                let new_end_column = new_end_byte - self.text.line_to_byte(new_end_line);
+                let new_end_column = new_end_byte.saturating_sub(self.text.line_to_byte(new_end_line));
                 tree_sitter::Point::new(new_end_line, new_end_column)
             };
 
@@ -141,9 +154,9 @@ impl<L: LineLayout> TextEditor<L> {
             }
 
             self.highlight_map.clear();
-
             if let Some(tree) = self.tree.as_ref() {
                 let mut query_cursor = QueryCursor::new();
+
                 let root_node = tree.root_node();
                 let text = self.text.to_string();
                 let highlights = query_cursor.matches(&highlight_config.query, root_node, text.as_bytes());
@@ -151,10 +164,13 @@ impl<L: LineLayout> TextEditor<L> {
                 for highlight in highlights {
                     for capture in highlight.captures {
                         let node = capture.node;
-                        let color = tree_sitter_to_crossterm_color(capture.index as usize, highlight_config, node);
 
-                        for i in node.start_byte()..node.end_byte() {
-                            self.highlight_map.insert(i, color);
+                        let index = usize::try_from(capture.index).unwrap_or(0);
+                        let start = node.start_byte().min(text_len);
+                        let end = node.end_byte().min(text_len);
+
+                        for i in start..end {
+                            self.highlight_map.insert(i, convert_color(index, highlight_config, node));
                         }
                     }
                 }

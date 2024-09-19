@@ -21,7 +21,7 @@ crate::define_colors! {
     LIGHT_GREEN => { r:164, g:225, b:133 },
 }
 
-pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
+pub fn convert_color(index: usize, highlighter: &HighlightConfiguration, node: Node) -> (Color, Option<Attribute>) {
     if let Ok(theme) = crate::HIGHLIGHT_COLORS.read() {
         if !theme.is_empty() && index < theme.len() {
             return (theme[index], None);
