@@ -31,6 +31,16 @@ pub fn tree_sitter_to_crossterm_color(index: usize, highlighter: &HighlightConfi
     let lang = highlighter.language_name.to_owned();
     let name = highlighter.query.capture_names()[index];
 
+    if lang == "toml" {
+        match name {
+            "string.special" => return (Colors::CYAN, None),
+            "type" => return (Colors::AQUA, None),
+            "variable.other.member" => return (Colors::MAGENTA, None),
+            "constant.numeric.integer" | "constant.numeric.float" => return (Colors::YELLOW, None),
+            _ => {}
+        }
+    }
+
     if lang == "html" || lang == "jsx" || lang == "xml" || lang == "tsx" {
         match name {
             "punctuation.special" => return (Colors::GREY, None),

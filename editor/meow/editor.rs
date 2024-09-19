@@ -3,12 +3,11 @@ use crate::{constants::HIGHLIGHT_NAMES, utils::*};
 
 use crossterm::style::{Attribute, Color};
 use ropey::{Rope, RopeSlice};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use tree_sitter::{Language, Parser, QueryCursor, Tree};
 use tree_sitter_highlight::HighlightConfiguration;
 use unicode_width::UnicodeWidthChar;
@@ -45,10 +44,10 @@ pub struct TextEditor<L: LineLayout> {
     tab_width: usize,
 
     pub text: Rope,
+    pub parser: Parser,
+    pub tree: Option<Tree>,
     pub highlight_config: Option<HighlightConfiguration>,
-    pub parser: Arc<Mutex<Parser>>,
-    pub tree: Arc<Mutex<Option<Tree>>>,
-    pub highlight_map: Arc<Mutex<HashMap<usize, (Color, Option<Attribute>)>>>,
+    pub highlight_map: FxHashMap<usize, (Color, Option<Attribute>)>,
 }
 
 impl<L: LineLayout> Display for TextEditor<L> {
@@ -66,8 +65,9 @@ impl<L: LineLayout> TextEditor<L> {
         }
 
         let mut editor = Self {
-            tree: Arc::new(Mutex::new(None)),
-            highlight_map: Arc::new(Mutex::new(HashMap::new())),
+            parser,
+            tree: None,
+            highlight_map: FxHashMap::default(),
             text: Rope::from_str(content),
             cursor: 0,
             target_column: 0,
@@ -80,7 +80,6 @@ impl<L: LineLayout> TextEditor<L> {
             current_history: 0,
             history_size: 16384,
             tab_width,
-            parser: Arc::new(Mutex::new(parser)),
             highlight_config,
         };
 
@@ -94,10 +93,6 @@ impl<L: LineLayout> TextEditor<L> {
         }
 
         if let Some(highlight_config) = &self.highlight_config {
-            let mut parser = self.parser.lock().unwrap();
-            let mut tree = self.tree.lock().unwrap();
-            let mut highlight_map = self.highlight_map.lock().unwrap();
-
             let start_line = self.text.byte_to_line(start_byte);
             let start_column = start_byte - self.text.line_to_byte(start_line);
             let start_position = tree_sitter::Point::new(start_line, start_column);
@@ -129,7 +124,7 @@ impl<L: LineLayout> TextEditor<L> {
                 tree_sitter::Point::new(new_end_line, new_end_column)
             };
 
-            if let Some(old_tree) = tree.as_mut() {
+            if let Some(old_tree) = self.tree.as_mut() {
                 let edit = tree_sitter::InputEdit {
                     start_byte,
                     old_end_byte,
@@ -140,13 +135,14 @@ impl<L: LineLayout> TextEditor<L> {
                 };
 
                 old_tree.edit(&edit);
-                *tree = parser.parse(self.text.to_string(), Some(old_tree));
+                self.tree = self.parser.parse(self.text.to_string(), Some(old_tree));
             } else {
-                *tree = parser.parse(self.text.to_string(), None);
+                self.tree = self.parser.parse(self.text.to_string(), None);
             }
 
-            highlight_map.clear();
-            if let Some(tree) = tree.as_ref() {
+            self.highlight_map.clear();
+
+            if let Some(tree) = self.tree.as_ref() {
                 let mut query_cursor = QueryCursor::new();
                 let root_node = tree.root_node();
                 let text = self.text.to_string();
@@ -158,7 +154,7 @@ impl<L: LineLayout> TextEditor<L> {
                         let color = tree_sitter_to_crossterm_color(capture.index as usize, highlight_config, node);
 
                         for i in node.start_byte()..node.end_byte() {
-                            highlight_map.insert(i, color);
+                            self.highlight_map.insert(i, color);
                         }
                     }
                 }

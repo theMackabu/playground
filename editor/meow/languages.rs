@@ -1276,7 +1276,6 @@ pub mod zig {
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Language {
-    Runtime(fn() -> Config),
     Plaintext,
     Ada,
     Asm,
@@ -1581,7 +1580,6 @@ impl Language {
             Self::Wgsl => wgsl::config(),
             Self::Yaml => yaml::config(),
             Self::Zig => zig::config(),
-            Self::Runtime(ptr) => ptr(),
         }
     }
 }

@@ -2,12 +2,16 @@
 ;-----------
 
 (table [
+  "]"
+  "["
   (bare_key)
   (dotted_key)
   (quoted_key)
 ] @type)
 
 (table_array_element [
+  "]]"
+  "[["
   (bare_key)
   (dotted_key)
   (quoted_key)
@@ -18,6 +22,8 @@
   (dotted_key)
   (quoted_key)
 ] @variable.other.member)
+
+(array ["[" "]"] @punctuation.bracket)
 
 ; Literals
 ;---------
@@ -37,12 +43,6 @@
 
 "." @punctuation.delimiter
 "," @punctuation.delimiter
-
 "=" @operator
-
-"[" @punctuation.bracket
-"]" @punctuation.bracket
-"[[" @punctuation.bracket
-"]]" @punctuation.bracket
 "{" @punctuation.bracket
 "}" @punctuation.bracket

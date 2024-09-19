@@ -33,8 +33,23 @@ use std::{
     sync::RwLock,
 };
 
-const PINK: Color = Color::Rgb { r: 226, g: 73, b: 210 };
-const BRIGHT_PINK: Color = Color::Rgb { r: 226, g: 145, b: 210 };
+const PINK: Color = Color::Rgb { r: 225, g: 120, b: 216 };
+const BRIGHT_PINK: Color = Color::Rgb { r: 237, g: 171, b: 232 };
+
+fn setup_panic() {
+    ::panic::setup_panic! {
+        name: "Meow Editor",
+        short_name: "meow",
+        version: env!("CARGO_PKG_VERSION"),
+        repository: "https://github.com/theMackabu/playground/tree/master/editor",
+        messages: {
+            colors: (Color::Magenta, Color::BrightMagenta, Color::BrightMagenta),
+            head: "Well, this is embarrassing. %(name) v%(version) had a problem and crashed. \nTo help us diagnose the problem you can send us a crash report\n",
+            body: "We have generated a report file at \"%(file_path)\". \nSubmit an issue or email with the subject of \"%(name) v%(version) crash report\" and include the report as an attachment at %(repository).\n",
+            footer: "We take privacy seriously, and do not perform any automated error collection. \nIn order to improve the software, we rely on people to submit reports. Thank you!"
+         }
+    };
+}
 
 pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent) -> TerminalBuffer {
     let lines = LineNumbers::new(editor.get_first_visible_line(), editor.len_lines(), editor.get_current_line() + 1, relative_line_numbers);
@@ -329,6 +344,8 @@ static BG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 33, g: 33, b: 33 })
 static FG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 255, g: 255, b: 255 });
 
 fn main() {
+    setup_panic();
+
     let config = config::load();
     let args = Args::parse();
 

@@ -1,5 +1,5 @@
 use crate::constants::HIGHLIGHT_NAMES;
-use ahash::{HashMap, HashMapExt};
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -17,7 +17,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct Theme {
-    pub styles: HashMap<String, Style>,
+    pub styles: FxHashMap<String, Style>,
     pub fg: Color,
     pub bg: Color,
 }
@@ -96,9 +96,9 @@ impl Theme {
         #[derive(Debug, Clone, Deserialize)]
         struct RawTheme {
             #[serde(default = "default_palette")]
-            palette: HashMap<String, Color>,
+            palette: FxHashMap<String, Color>,
             #[serde(flatten)]
-            styles: HashMap<String, RawStyle>,
+            styles: FxHashMap<String, RawStyle>,
         }
 
         impl RawTheme {
@@ -136,7 +136,7 @@ impl Theme {
             }
         };
 
-        let mut styles = HashMap::new();
+        let mut styles = FxHashMap::default();
 
         for name in HIGHLIGHT_NAMES {
             if let Some(s) = raw.styles.get(*name) {
@@ -218,4 +218,4 @@ fn default_palette_colors() -> impl Iterator<Item = (String, Color)> {
     .map(|(k, v)| (k.to_string(), v))
 }
 
-fn default_palette() -> HashMap<String, Color> { default_palette_colors().collect() }
+fn default_palette() -> FxHashMap<String, Color> { default_palette_colors().collect() }

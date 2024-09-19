@@ -127,9 +127,7 @@ impl Widget<TerminalBuffer, UiEvent, Vec<UiReaction>> for LineNumbers {
 impl Drawable<TerminalBuffer> for TextEditor<TermLineLayoutSettings> {
     fn draw(&self, width: u32, height: u32) -> TerminalBuffer {
         let mut buffer = Vec::with_capacity(width as usize * height as usize);
-
         let selection_range = self.get_selection_range().unwrap_or(0..0);
-        let highlight_map = self.highlight_map.lock().unwrap();
 
         for line_num in self.get_lines_scrolled()..self.get_lines_scrolled() + height as usize {
             let mut column = 0;
@@ -165,7 +163,7 @@ impl Drawable<TerminalBuffer> for TextEditor<TermLineLayoutSettings> {
                         );
                     } else if column >= self.get_columns_scrolled() && column + grapheme_width <= self.get_columns_scrolled() + width as usize {
                         let fg_color = *crate::FG_COLOR.read().expect("Able to read FG_COLOR");
-                        let color = highlight_map.get(&(cursor + line_start)).copied().unwrap_or((fg_color, None));
+                        let color = self.highlight_map.get(&(cursor + line_start)).copied().unwrap_or((fg_color, None));
 
                         if grapheme.chars().eq(std::iter::once('\t')) {
                             buffer.extend(

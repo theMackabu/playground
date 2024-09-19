@@ -23,13 +23,16 @@ codegen-units = 1
 home = "0.5.9"
 ropey = "1.6.1"
 toml = "0.8.19"
-ahash = "0.8.11"
+panic = "0.3.1"
 cfg-if = "1.0.0"
 crossterm = "0.27.0"
+rustc-hash = "2.0.0"
 thiserror = "1.0.63"
 const_format = "0.2.33"
 unicode-width = "0.1.13"
 unicode-segmentation = "1.11.0"
+
+# derive impl
 clap = { version = "4.5.17", features = ["derive"] }
 serde = { version = "1.0.210", features = ["derive"] }
 
@@ -37,7 +40,6 @@ serde = { version = "1.0.210", features = ["derive"] }
 tree-sitter = "0.23.0"
 tree-sitter-language = "0.1.0"
 tree-sitter-highlight = "0.23.0"
-
 
 [build-dependencies]
 cc = "1"
