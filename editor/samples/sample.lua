@@ -1,44 +1,91 @@
-function events.tick()
-	 if data.time >= data.frameCount then
-		  data.time = 0
-		  data.nextBlink = world.getTime() + math.random(15, 130)
-	 end
+-- This is a comment
 
-	 if data.sparkTime >= data.sparkCount then
-		  data.sparkTime = 0
-		  data.nextSpark = world.getTime() + math.random(5, 10) --Setting to make sparks (Random Generates between two numbers)
-	 end
+-- Variables and assignments
+local x = 10
+local y = 20.5
+local z = "Hello, world!"
+local multiline_string = [[
+	 This is a
+	 multiline string
+]]
 
-	 local sparkUVs = data.sparkTime / data.sparkCount
-	 local spriteUVs = data.time / data.frameCount
-	 local h = models.HenryModel.Main.Head.pixel_art_animations.neutral_blinking
-	 local s = models.HenryModel.Spark
-
-	 h["Neutral Blinking"]:setUV(0, spriteUVs)
-	 h["Eye Shinies"]:setUV(0, spriteUVs)
-	 if s and s["SparkCube"] then
-		  s["SparkCube"]:setUV(0, sparkUVs * data.nextSpark)
-	 end
-
-	 
-	 if data.nextBlink < world.getTime() then
-		  data.time = data.time + 2
-	 end
-	 
-	 if data.nextSpark < world.getTime() then
-		  data.sparkTime = data.sparkTime + 2
-	 end
-
-	 h["Eye Shinies"]:setSecondaryColor(
-		  math.map(world.getLightLevel(player:getPos()), 0, 0.5, 0, 0.02)
-	 )
-	  
-	 h["ButtonEyes"]:setSecondaryColor(
-		  math.map(world.getLightLevel(player:getPos()), 0, 0.5, 0, 0.02)
-	 )
-	 if (spriteUVs ~= 0) then
-		  models.HenryModel.Main.Head.pixel_art_animations.neutral_blinking.ButtonEyes:setVisible(false)
-	 else
-		  models.HenryModel.Main.Head.pixel_art_animations.neutral_blinking.ButtonEyes:setVisible(true)
-	 end
+-- Functions
+function greet(name)
+	 print("Hello, " .. name .. "!")
 end
+
+local function add(a, b)
+	 return a + b
+end
+
+-- Control structures
+if x > 5 then
+	 print("x is greater than 5")
+elseif x < 5 then
+	 print("x is less than 5")
+else
+	 print("x is equal to 5")
+end
+
+for i = 1, 5 do
+	 print(i)
+end
+
+local count = 0
+while count < 3 do
+	 print("Count: " .. count)
+	 count = count + 1
+end
+
+-- Tables
+local fruits = {"apple", "banana", "orange"}
+local person = {
+	 name = "John",
+	 age = 30,
+	 isStudent = false
+}
+
+-- Metatables
+local mt = {
+	 __add = function(a, b)
+		  return { value = a.value + b.value }
+	 end
+}
+
+local obj1 = { value = 10 }
+local obj2 = { value = 20 }
+setmetatable(obj1, mt)
+setmetatable(obj2, mt)
+
+local result = obj1 + obj2
+print(result.value)  -- Output: 30
+
+-- Coroutines
+local co = coroutine.create(function()
+	 for i = 1, 3 do
+		  print("Coroutine: " .. i)
+		  coroutine.yield()
+	 end
+end)
+
+coroutine.resume(co)
+coroutine.resume(co)
+coroutine.resume(co)
+
+-- Error handling
+local success, err = pcall(function()
+	 error("This is a test error")
+end)
+
+if not success then
+	 print("Caught error: " .. err)
+end
+
+-- Modules
+local mymodule = {}
+
+function mymodule.sayHello()
+	 print("Hello from module!")
+end
+
+return mymodule
