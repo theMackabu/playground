@@ -20,6 +20,7 @@ meow --[OPTIONS] <FILE_PATH>
 - `--tab-width`, `-t <TAB_WIDTH>`: Set custom tab width (default: 4)
 - `--theme`, `-s <THEME>`: Specify a custom theme
 - `--relative-line-numbers`, `-r`: Use relative line numbers
+- `--list-themes`: List all themes that can be used
 
 ## Keyboard Shortcuts
 
