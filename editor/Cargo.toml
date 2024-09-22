@@ -19,6 +19,9 @@ lto = true
 opt-level = 3
 codegen-units = 1
 
+[features]
+debugger = ["dep:tracing-live", "dep:tracing", "dep:tracing-subscriber"]
+
 [dependencies]
 home = "0.5.9"
 ropey = "1.6.1"
@@ -40,6 +43,11 @@ serde = { version = "1.0.210", features = ["derive"] }
 tree-sitter = "0.23.0"
 tree-sitter-language = "0.1.0"
 tree-sitter-highlight = "0.23.0"
+
+# debug
+tracing = { version = "0.1.40", optional = true }
+tracing-live = { version = "0.0.3", optional = true }
+tracing-subscriber = { version = "0.3.18", optional = true }
 
 [build-dependencies]
 cc = "1"

@@ -3,6 +3,6 @@ name = "meow-editor"
 version = "1.2.0"
 
 [tasks]
-test.script = ["fleet run --release samples/sample.%{arg.1}"]
+test.script = ["fleet run --features debugger --release samples/sample.%{arg.1}"]
 install.script = "cargo install --path ."
 compress.script = "gtar -I 'zstd -19' -cvpf languages.tar.zst languages"

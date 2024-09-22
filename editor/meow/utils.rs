@@ -31,6 +31,15 @@ pub fn convert_color(index: usize, highlighter: &HighlightConfiguration, node: N
     let lang = highlighter.language_name.to_owned();
     let name = highlighter.query.capture_names()[index];
 
+    if lang == "yaml" {
+        match name {
+            "property" => return (Colors::MAGENTA, None),
+            "punctuation.delimiter" | "punctuation.special" => return (Colors::GREY, None),
+            "constant.numeric.integer" | "constant.numeric.float" => return (Colors::YELLOW, None),
+            _ => {}
+        }
+    }
+
     if lang == "toml" {
         match name {
             "string.special" => return (Colors::CYAN, None),
@@ -162,7 +171,7 @@ pub fn file_type(file_name: &Path) -> String {
         Some("asp" | "asax" | "ascx" | "ashx" | "asmx" | "aspx" | "axd") => "ASP",
         Some("as") => "actionscript",
         Some("asc" | "ash") => "AGS",
-        Some("asm" | "nasm") => "assembly",
+        Some("asm" | "assembly" | "assembler" | "nasm" | "s") => "assembly",
         Some("awk" | "auk" | "gawk" | "mawk" | "nawk") => "awk",
         Some("bat" | "cmd") => "batch",
         Some("b" | "bf") => "brainfuck",
@@ -268,4 +277,88 @@ pub fn file_type(file_name: &Path) -> String {
         None => "unknown",
     }
     .to_string()
+}
+
+#[cfg(feature = "debugger")]
+pub fn color_name(color: Color) -> String {
+    match color {
+        Color::Black => "#000000 (Black)".to_string(),
+        Color::DarkGrey => "#555555 (DarkGrey)".to_string(),
+        Color::Red => "#FF0000 (Red)".to_string(),
+        Color::DarkRed => "#800000 (DarkRed)".to_string(),
+        Color::Green => "#00FF00 (Green)".to_string(),
+        Color::DarkGreen => "#008000 (DarkGreen)".to_string(),
+        Color::Yellow => "#FFFF00 (Yellow)".to_string(),
+        Color::DarkYellow => "#808000 (DarkYellow)".to_string(),
+        Color::Blue => "#0000FF (Blue)".to_string(),
+        Color::DarkBlue => "#000080 (DarkBlue)".to_string(),
+        Color::Magenta => "#FF00FF (Magenta)".to_string(),
+        Color::DarkMagenta => "#800080 (DarkMagenta)".to_string(),
+        Color::Cyan => "#00FFFF (Cyan)".to_string(),
+        Color::DarkCyan => "#008080 (DarkCyan)".to_string(),
+        Color::White => "#FFFFFF (White)".to_string(),
+        Color::Grey => "#808080 (Grey)".to_string(),
+        Color::Rgb { r, g, b } => {
+            let color_names = [
+                ("Black", (0, 0, 0)),
+                ("White", (255, 255, 255)),
+                ("Red", (255, 0, 0)),
+                ("Green", (0, 255, 0)),
+                ("Blue", (0, 0, 255)),
+                ("Yellow", (255, 255, 0)),
+                ("Cyan", (0, 255, 255)),
+                ("Magenta", (255, 0, 255)),
+                ("Silver", (192, 192, 192)),
+                ("Gray", (128, 128, 128)),
+                ("Maroon", (128, 0, 0)),
+                ("Olive", (128, 128, 0)),
+                ("Dark Green", (0, 128, 0)),
+                ("Purple", (128, 0, 128)),
+                ("Teal", (0, 128, 128)),
+                ("Navy", (0, 0, 128)),
+                ("Orange", (255, 165, 0)),
+                ("Pink", (255, 192, 203)),
+                ("Brown", (165, 42, 42)),
+                ("Coral", (255, 127, 80)),
+                ("Tomato", (255, 99, 71)),
+                ("Gold", (255, 215, 0)),
+                ("Lavender", (230, 230, 250)),
+                ("Light Yellow", (255, 255, 224)),
+                ("Light Blue", (173, 216, 230)),
+                ("Light Green", (144, 238, 144)),
+                ("Light Pink", (255, 182, 193)),
+                ("Light Cyan", (224, 255, 255)),
+                ("Light Gray", (211, 211, 211)),
+                ("Dark Orange", (255, 140, 0)),
+                ("Indigo", (75, 0, 130)),
+                ("Violet", (238, 130, 238)),
+                ("Turquoise", (64, 224, 208)),
+                ("Salmon", (250, 128, 114)),
+                ("Khaki", (240, 230, 140)),
+                ("Plum", (221, 160, 221)),
+                ("Orchid", (218, 112, 214)),
+                ("Sky Blue", (135, 206, 235)),
+                ("Tan", (210, 180, 140)),
+                ("Beige", (245, 245, 220)),
+                ("Mint", (189, 252, 201)),
+                ("Slate Gray", (112, 128, 144)),
+                ("Forest Green", (34, 139, 34)),
+                ("Crimson", (220, 20, 60)),
+            ];
+
+            let closest_color = color_names
+                .iter()
+                .min_by_key(|&&(_, (cr, cg, cb))| {
+                    let dr = r as i32 - cr as i32;
+                    let dg = g as i32 - cg as i32;
+                    let db = b as i32 - cb as i32;
+                    (2 * dr * dr + 4 * dg * dg + 3 * db * db) as u32
+                })
+                .map(|&(name, _)| name)
+                .unwrap_or("Unknown");
+
+            format!("#{:02X}{:02X}{:02X} ({})", r, g, b, closest_color)
+        }
+        _ => "Unsupported color type".to_string(),
+    }
 }

@@ -21,6 +21,22 @@ use ui::*;
 use widgets::*;
 use widgets_impl::*;
 
+#[cfg(feature = "debugger")]
+mod debugger {
+    use tracing_live::Log;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    pub fn init() { tracing_subscriber::registry().with(Log::builder().with_host("127.0.0.1:8362").build()).init(); }
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {
+        #[cfg(feature = "debugger")]
+        tracing::debug!($($arg)*);
+    }
+}
+
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     style::{Color, Stylize},
@@ -28,7 +44,7 @@ use crossterm::{
 };
 
 use std::{
-    fs::read_to_string,
+    fs,
     path::{Path, PathBuf},
     sync::RwLock,
 };
@@ -346,6 +362,9 @@ static FG_COLOR: RwLock<Color> = RwLock::new(Color::Rgb { r: 255, g: 255, b: 255
 fn main() {
     setup_panic();
 
+    #[cfg(feature = "debugger")]
+    debugger::init();
+
     let config = config::load();
     let args = Args::parse();
 
@@ -365,10 +384,10 @@ fn main() {
         disable_mouse_interaction: args.disable_mouse_interaction.or(config.disable_mouse_interaction).unwrap_or(false),
     };
 
-    let (file_content, is_newly_loaded) = match read_to_string(&args.file_path.to_owned()) {
-        Ok(x) => (x, false),
+    let (file_content, is_newly_loaded) = match fs::read(&args.file_path.to_owned()) {
+        Ok(d) => (String::from_utf8_lossy(&d).into_owned(), false),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (String::new(), true),
-        Err(e) => return eprintln!("{}", format!("Failed to open file: {e:?}").with(Color::Red)),
+        Err(e) => return eprintln!("{}", format!("Failed to open file: {e}").with(Color::Red)),
     };
 
     if let Some(name) = args.theme.to_owned() {

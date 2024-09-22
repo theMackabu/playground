@@ -168,9 +168,19 @@ impl<L: LineLayout> TextEditor<L> {
                         let index = usize::try_from(capture.index).unwrap_or(0);
                         let start = node.start_byte().min(text_len);
                         let end = node.end_byte().min(text_len);
+                        let color = convert_color(index, highlight_config, node);
+
+                        #[cfg(feature = "debugger")]
+                        {
+                            let text = &text[node.start_byte()..node.end_byte()];
+                            let lang = highlight_config.language_name.to_owned();
+                            let name = highlight_config.query.capture_names()[index];
+
+                            tracing::debug!(index, name, lang, text, color = color_name(color.0));
+                        }
 
                         for i in start..end {
-                            self.highlight_map.insert(i, convert_color(index, highlight_config, node));
+                            self.highlight_map.insert(i, color);
                         }
                     }
                 }

@@ -1361,7 +1361,7 @@ impl Language {
     pub fn from_token(token: impl AsRef<str>) -> Option<Self> {
         match token.as_ref() {
             "ada" => Some(Self::Ada),
-            "asm" | "assembly" | "assembler" | "nasm" => Some(Self::Asm),
+            "asm" | "assembly" | "assembler" | "nasm" | "s" => Some(Self::Asm),
             "awk" => Some(Self::Awk),
             "bash" => Some(Self::Bash),
             "sh" => Some(Self::Bash),
@@ -1493,7 +1493,7 @@ impl Language {
             "x86asm" => Some(Self::X86asm),
             "x86" => Some(Self::X86asm),
             "wgsl" => Some(Self::Wgsl),
-            "yaml" => Some(Self::Yaml),
+            "yaml" | "yml" => Some(Self::Yaml),
             "zig" => Some(Self::Zig),
             _ => None,
         }
