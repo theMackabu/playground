@@ -32,6 +32,18 @@ pub fn convert_color(index: usize, highlighter: &HighlightConfiguration, node: N
     let lang = highlighter.language_name.to_owned();
     let name = highlighter.query.capture_names()[index];
 
+    if lang == "markdown" {
+        match name {
+            "text.title" => return italic!(ORANGE),
+            _ => {}
+        }
+
+        match node.kind() {
+            "atx_h1_marker" | "atx_h2_marker" | "atx_h3_marker" | "atx_h4_marker" | "atx_h5_marker" | "atx_h6_marker" => return italic!(ORANGE),
+            _ => {}
+        }
+    }
+
     if lang == "cpp" || lang == "c" {
         match name {
             "type" => return italic!(CYAN),
