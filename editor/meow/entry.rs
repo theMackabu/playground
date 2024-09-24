@@ -37,6 +37,23 @@ macro_rules! debug {
     }
 }
 
+macro_rules! match_keybind {
+    ($keybinds:expr, $action:ident, $code:expr, $modifiers:expr, $block:block) => {
+        let keybind_str = $keybinds.get_keybind(stringify!($action));
+        debug!("Checking keybind for {}: {}", stringify!($action), keybind_str);
+        if let Some((kb_mod, kb_code)) = parse_keybind(&keybind_str) {
+            debug!("Parsed keybind: {:?} {:?}", kb_mod, kb_code);
+            debug!("Received event: {:?} {:?}", $modifiers, $code);
+            if $code == kb_code && $modifiers == kb_mod {
+                debug!("Keybind matched!");
+                $block
+            }
+        } else {
+            debug!("Failed to parse keybind");
+        }
+    };
+}
+
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     style::{Color, Stylize},
@@ -117,12 +134,47 @@ pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSetting
     buffer
 }
 
+fn parse_keybind(keybind: &str) -> Option<(KeyModifiers, KeyCode)> {
+    let parts: Vec<&str> = keybind.split('+').collect();
+    let mut modifiers = KeyModifiers::empty();
+    let key_code = parts.last()?;
+
+    for part in &parts[..parts.len() - 1] {
+        match part.to_lowercase().as_str() {
+            "ctrl" => modifiers.insert(KeyModifiers::CONTROL),
+            "alt" => modifiers.insert(KeyModifiers::ALT),
+            "shift" => modifiers.insert(KeyModifiers::SHIFT),
+            _ => return None,
+        }
+    }
+
+    let key_code = match key_code.to_lowercase().as_str() {
+        "up" => KeyCode::Up,
+        "down" => KeyCode::Down,
+        "left" => KeyCode::Left,
+        "right" => KeyCode::Right,
+        "home" => KeyCode::Home,
+        "end" => KeyCode::End,
+        "pageup" => KeyCode::PageUp,
+        "pagedown" => KeyCode::PageDown,
+        "tab" => KeyCode::Tab,
+        "backspace" => KeyCode::Backspace,
+        "enter" => KeyCode::Enter,
+        "esc" => KeyCode::Esc,
+        s if s.len() == 1 => KeyCode::Char(s.chars().next()?.to_ascii_lowercase()),
+        _ => return None,
+    };
+
+    Some((modifiers, key_code))
+}
+
 fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
     let Parsed {
         file_path,
         relative_line_numbers,
         tab_width,
         disable_mouse_interaction,
+        keybinds,
         ..
     } = args;
 
@@ -157,7 +209,11 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                     current_buffer = next_buffer;
                 }
                 Event::Key(KeyEvent { code, modifiers, .. }) => {
-                    if code == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL {
+                    let mut ui_event = UiEvent::Nothing;
+
+                    debug!("Received key event: {:?} {:?}", code, modifiers);
+
+                    match_keybind!(keybinds, quit, code, modifiers, {
                         if editor.has_changed_since_save() {
                             match prompt_save(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers) {
                                 SavePromptResult::Save => {
@@ -173,39 +229,52 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                         } else {
                             break;
                         }
-                    }
+                    });
 
-                    let mut ui_event = UiEvent::Nothing;
-
-                    if code == KeyCode::Char('s') && modifiers == KeyModifiers::CONTROL {
+                    match_keybind!(keybinds, save, code, modifiers, {
                         let string = editor.to_string();
-
                         if std::fs::create_dir_all(file_path.as_path().parent().unwrap()).is_ok() && std::fs::write(file_path.as_path(), string).is_ok() {
                             editor.set_saved();
                         }
-                    } else if code == KeyCode::Char('a') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, discard_changes, code, modifiers, {
                         editor.discard_changes();
-                    } else if code == KeyCode::Char('z') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, undo, code, modifiers, {
                         editor.undo();
-                    } else if code == KeyCode::Char('y') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, redo, code, modifiers, {
                         editor.redo();
-                    } else if code == KeyCode::Char('c') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, copy, code, modifiers, {
                         if let Some(x) = editor.get_selection() {
                             clip = x;
                         }
-                    } else if code == KeyCode::Char('v') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, paste, code, modifiers, {
                         if !clip.is_empty() {
                             editor.insert_string_at_cursor(&clip);
                         }
-                    } else if code == KeyCode::Char('x') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, cut, code, modifiers, {
                         if let Some(x) = editor.cut_selection() {
                             clip = x;
                         }
-                    } else if code == KeyCode::Char('c') && modifiers == KeyModifiers::ALT {
+                    });
+
+                    match_keybind!(keybinds, system_copy, code, modifiers, {
                         if let Some(x) = editor.get_selection() {
                             system_clip.as_mut().map(|y| y.set_text(x));
                         }
-                    } else if code == KeyCode::Char('v') && modifiers == KeyModifiers::ALT {
+                    });
+
+                    match_keybind!(keybinds, system_paste, code, modifiers, {
                         if let Some(x) = system_clip.as_mut() {
                             if let Ok(y) = x.get_text() {
                                 if !y.is_empty() {
@@ -213,39 +282,63 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                                 }
                             }
                         }
-                    } else if code == KeyCode::Char('x') && modifiers == KeyModifiers::ALT {
+                    });
+
+                    match_keybind!(keybinds, system_cut, code, modifiers, {
                         if let Some(x) = editor.cut_selection() {
                             system_clip.as_mut().map(|y| y.set_text(x));
                         }
-                    } else if code == KeyCode::Up {
-                        editor.move_cursor_vertical(-1, modifiers == KeyModifiers::SHIFT, false);
-                    } else if code == KeyCode::Down {
-                        editor.move_cursor_vertical(1, modifiers == KeyModifiers::SHIFT, false);
-                    } else if code == KeyCode::Left && modifiers.contains(KeyModifiers::CONTROL) {
+                    });
+
+                    match_keybind!(keybinds, move_up, code, modifiers, {
+                        editor.move_cursor_vertical(-1, modifiers.contains(KeyModifiers::SHIFT), false);
+                    });
+
+                    match_keybind!(keybinds, move_down, code, modifiers, {
+                        editor.move_cursor_vertical(1, modifiers.contains(KeyModifiers::SHIFT), false);
+                    });
+
+                    match_keybind!(keybinds, move_left, code, modifiers, {
+                        editor.move_cursor_horizontal(-1, modifiers.contains(KeyModifiers::SHIFT), true);
+                    });
+
+                    match_keybind!(keybinds, move_right, code, modifiers, {
+                        editor.move_cursor_horizontal(1, modifiers.contains(KeyModifiers::SHIFT), true);
+                    });
+
+                    match_keybind!(keybinds, move_word_left, code, modifiers, {
                         editor.move_cursor_horizontal_words(-1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    } else if code == KeyCode::Right && modifiers.contains(KeyModifiers::CONTROL) {
+                    });
+
+                    match_keybind!(keybinds, move_word_right, code, modifiers, {
                         editor.move_cursor_horizontal_words(1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    } else if code == KeyCode::Left {
-                        editor.move_cursor_horizontal(-1, modifiers == KeyModifiers::SHIFT, true);
-                    } else if code == KeyCode::Right {
-                        editor.move_cursor_horizontal(1, modifiers == KeyModifiers::SHIFT, true);
-                    } else if code == KeyCode::Home {
-                        editor.move_cursor_to_start_of_line(modifiers == KeyModifiers::SHIFT, true);
-                    } else if code == KeyCode::End {
-                        editor.move_cursor_to_end_of_line(modifiers == KeyModifiers::SHIFT, true);
-                    } else if code == KeyCode::Char('b') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, move_to_start_of_line, code, modifiers, {
+                        editor.move_cursor_to_start_of_line(modifiers.contains(KeyModifiers::SHIFT), true);
+                    });
+
+                    match_keybind!(keybinds, move_to_end_of_line, code, modifiers, {
+                        editor.move_cursor_to_end_of_line(modifiers.contains(KeyModifiers::SHIFT), true);
+                    });
+
+                    match_keybind!(keybinds, page_up, code, modifiers, {
                         ui_event = UiEvent::ScrollPage(Scroll::Up(Size::Full));
-                    } else if code == KeyCode::Char('f') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, page_down, code, modifiers, {
                         ui_event = UiEvent::ScrollPage(Scroll::Down(Size::Full));
-                    } else if code == KeyCode::Char('u') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, half_page_up, code, modifiers, {
                         ui_event = UiEvent::ScrollPage(Scroll::Up(Size::Half));
-                    } else if code == KeyCode::Char('d') && modifiers == KeyModifiers::CONTROL {
+                    });
+
+                    match_keybind!(keybinds, half_page_down, code, modifiers, {
                         ui_event = UiEvent::ScrollPage(Scroll::Down(Size::Half));
-                    } else if code == KeyCode::PageUp {
-                        ui_event = UiEvent::ScrollPage(Scroll::Up(Size::Full));
-                    } else if code == KeyCode::PageDown {
-                        ui_event = UiEvent::ScrollPage(Scroll::Down(Size::Full));
-                    } else if let KeyCode::Char(c) = code {
+                    });
+
+                    if let KeyCode::Char(c) = code {
                         editor.insert_character_at_cursor(c);
                     } else if code == KeyCode::Enter {
                         editor.insert_newline_at_cursor();
@@ -263,12 +356,6 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                     current_buffer = next_buffer;
                 }
 
-                Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollUp, .. }) => {
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(-1));
-
-                    render(width as usize, cursor_position, &next_buffer, &current_buffer);
-                    current_buffer = next_buffer;
-                }
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollDown, .. }) => {
                     let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(1));
 
@@ -351,6 +438,7 @@ struct Parsed {
     tab_width: usize,
     theme: Option<String>,
     relative_line_numbers: bool,
+    keybinds: config::Keybinds,
 }
 
 static THEME: RwLock<Option<Theme>> = RwLock::new(None);
@@ -376,9 +464,19 @@ fn main() {
         return;
     }
 
+    #[cfg(feature = "debugger")]
+    {
+        if let Some(ref keybinds) = config.keybinds {
+            debug!("Loaded keybinds: {:?}", keybinds);
+        } else {
+            debug!("No custom keybinds loaded, using defaults");
+        }
+    }
+
     let args = Parsed {
         file_path: args.file_path.unwrap(),
         theme: args.theme.or(config.theme),
+        keybinds: config.keybinds.unwrap_or_default(),
         tab_width: args.tab_width.or(config.tab_width).unwrap_or(4),
         relative_line_numbers: args.relative_line_numbers.or(config.relative_line_numbers).unwrap_or(false),
         disable_mouse_interaction: args.disable_mouse_interaction.or(config.disable_mouse_interaction).unwrap_or(false),
