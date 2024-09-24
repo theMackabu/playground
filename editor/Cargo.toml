@@ -7,7 +7,7 @@ description = "the meow text editor"
 
 # build info
 build = "build.rs"
-exclude = ["languages"]
+exclude = ["languages", "meow/.DS_Store"]
 include = ["languages.tar.zst", "languages.toml", "meow/*", "themes/*", "build.rs"]
 
 [[bin]]
