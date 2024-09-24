@@ -176,7 +176,7 @@ impl<L: LineLayout> TextEditor<L> {
                             let lang = highlight_config.language_name.to_owned();
                             let name = highlight_config.query.capture_names()[index];
 
-                            tracing::debug!(index, name, lang, text, color = color_name(color.0));
+                            tracing::debug!(index, name, kind = node.kind(), lang, text, color = color_name(color.0));
                         }
 
                         for i in start..end {

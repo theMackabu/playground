@@ -1,11 +1,12 @@
 use crate::languages::{Config, Language};
+use crate::{color, crcolor, define_colors, italic};
 
 use crossterm::style::{Attribute, Color};
 use std::path::Path;
 use tree_sitter::Node;
 use tree_sitter_highlight::HighlightConfiguration;
 
-crate::define_colors! {
+define_colors! {
     RED => { r:255, g:0, b: 0 },
     GREY => { r:142, g:178, b:217 },
     CYAN => { r:48, g:232, b:233 },
@@ -31,89 +32,106 @@ pub fn convert_color(index: usize, highlighter: &HighlightConfiguration, node: N
     let lang = highlighter.language_name.to_owned();
     let name = highlighter.query.capture_names()[index];
 
+    if lang == "cpp" || lang == "c" {
+        match name {
+            "type" => return italic!(CYAN),
+            "type.builtin" => return color!(BLUE),
+            "keyword.control.conditional" => return color!(BLUE),
+            _ => {}
+        }
+    }
+
     if lang == "yaml" {
         match name {
-            "property" => return (Colors::MAGENTA, None),
-            "punctuation.delimiter" | "punctuation.special" => return (Colors::GREY, None),
-            "constant.numeric.integer" | "constant.numeric.float" => return (Colors::YELLOW, None),
+            "property" => return color!(MAGENTA),
+            "punctuation.delimiter" | "punctuation.special" => return color!(GREY),
+            "constant.numeric.integer" | "constant.numeric.float" => return color!(YELLOW),
             _ => {}
         }
     }
 
     if lang == "toml" {
         match name {
-            "string.special" => return (Colors::CYAN, None),
-            "type" => return (Colors::AQUA, None),
-            "variable.other.member" => return (Colors::MAGENTA, None),
-            "constant.numeric.integer" | "constant.numeric.float" => return (Colors::YELLOW, None),
+            "string.special" => return color!(CYAN),
+            "type" => return color!(AQUA),
+            "variable.other.member" => return color!(MAGENTA),
+            "constant.numeric.integer" | "constant.numeric.float" => return color!(YELLOW),
             _ => {}
         }
     }
 
     if lang == "html" || lang == "jsx" || lang == "xml" || lang == "tsx" {
         match name {
-            "punctuation.special" => return (Colors::GREY, None),
-            "variable.parameter" => return (Colors::MAGENTA, None),
-            "tag" => return (Colors::GREEN, None),
-            "constructor" => return (Colors::CYAN, None),
+            "punctuation.special" => return color!(GREY),
+            "variable.parameter" => return color!(MAGENTA),
+            "tag" => return color!(GREEN),
+            "constructor" => return color!(CYAN),
             _ => {}
         }
 
         match node.kind() {
-            "\"" => return (Colors::ORANGE, None),
-            "<" | ">" | "</" => return (Colors::DARK_GREEN, None),
-            "identifier" => return (Colors::GREEN, None),
-            "CData" => return (Color::White, None),
-            "CDStart" | "]]>" => return (Colors::BLUE, None),
-            "Name" | "attribute_name" => return (Colors::LIGHT_GREEN, None),
-            "<?" | "?>" | "version" | "encoding" | "xml" => return (Colors::GREY, None),
+            "\"" => return color!(ORANGE),
+            "<" | ">" | "</" => return color!(DARK_GREEN),
+            "identifier" => return color!(GREEN),
+            "CData" => return crcolor!(White),
+            "CDStart" | "]]>" => return color!(BLUE),
+            "Name" | "attribute_name" => return color!(LIGHT_GREEN),
+            "<?" | "?>" | "version" | "encoding" | "xml" => return color!(GREY),
             _ => {}
         }
     }
 
     match node.kind() {
-        "escape_sequence" => (Colors::PEACH, Some(Attribute::Italic)),
-        "identifier_reference" => (Colors::MAGENTA, None),
-        "line_comment" | "js_comment" | "comment" => (Colors::DARK_GREY, None),
-        "raw_text" => (Color::Grey, None),
-        "attribute_name" | "word" => (Colors::MAGENTA, None),
-        "tag_name" => (Colors::GREEN, None),
-        "case" | "auto" => (Colors::AQUA, None),
-        "#ifndef" | "#define" | "#include" => (Colors::GREY, Some(Attribute::Italic)),
-        "null_scalar" => (Color::Grey, None),
-        "regex_pattern" | "unit" | "@keyframes" => (Colors::YELLOW, None),
-        "boolean" | "boolean_scalar" => (Colors::BLUE, None),
-        "fenced_code_block" => (Colors::BLUE, None),
-        "color_value" | "#" => (Colors::ORANGE, None),
-        "code_fence_content" => (Color::Grey, None),
-        "list_marker_minus" | "#{" => (Colors::GREY, None),
-        "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => (Colors::YELLOW, None),
-        "mutable_specifier" => (Colors::CYAN, Some(Attribute::Italic)),
+        "escape_sequence" => italic!(PEACH),
+        "identifier_reference" => color!(MAGENTA),
+        "line_comment" | "js_comment" | "comment" => color!(DARK_GREY),
+        "raw_text" => crcolor!(Grey),
+        "attribute_name" | "word" => color!(MAGENTA),
+        "tag_name" => color!(GREEN),
+        "case" | "auto" => color!(AQUA),
+        "null_scalar" => crcolor!(Grey),
+        "regex_pattern" | "unit" | "@keyframes" => color!(YELLOW),
+        "boolean" | "boolean_scalar" => color!(BLUE),
+        "fenced_code_block" => color!(BLUE),
+        "color_value" | "#" => color!(ORANGE),
+        "code_fence_content" => crcolor!(Grey),
+        "list_marker_minus" | "#{" => color!(GREY),
+        "integer_literal" | "float_literal" | "thematic_break" | "list_marker_dot" | "integer_value" => color!(YELLOW),
+        "mutable_specifier" => italic!(CYAN),
         _ => match name {
-            "diff.minus" => (Colors::RED, None),
-            "diff.plus" => (Colors::GREEN, None),
-            "boolean" => (Colors::BLUE, None),
-            "punctuation.special" | "text.title" => (Colors::ORANGE, None),
-            "definition.module" => (Colors::BLUE, None),
-            "property" => (Colors::MAGENTA, None),
-            "function" | "function.call" => (Colors::GREEN, None),
-            "function.macro" => (Colors::AQUA, Some(Attribute::Italic)),
-            "function.method" | "constructor" | "method" => (Colors::CYAN, None),
-            "keyword" | "keyword.operator" => (Colors::BLUE, None),
-            "comment" => (Colors::DARK_GREY, None),
-            "operator" | "attribute" | "punctuation.bracket" => (Colors::GREY, None),
-            "string" | "string.special" | "comment.documentation" => (Colors::ORANGE, None),
-            "variable.builtin" | "conditional" | "repeat" | "keyword.function" | "keyword.return" => (Colors::BLUE, None),
-            "variable" | "variable.parameter" | "parameter" | "local.reference" => (Colors::MAGENTA, None),
-            "number" | "float" => (Colors::YELLOW, None),
-            "type" | "type.builtin" | "type.definition" => (Colors::CYAN, None),
-            "type.enum.variant" => (Colors::BLUE, None),
-            "constant" | "constant.builtin" => (Colors::BLUE, None),
-            "punctuation" | "punctuation.delimiter" => (Color::White, None),
-            "label" => (Color::Green, None),
-            "module" | "include" => (Colors::BLUE, None),
-            "error" => (Color::Red, None),
-            _ => (Color::Reset, None),
+            "keyword"
+            | "keyword.operator"
+            | "keyword.control"
+            | "keyword.control.exception"
+            | "keyword.control.return"
+            | "keyword.control.conditional"
+            | "keyword.control.repeat"
+            | "keyword.storage.modifier"
+            | "keyword.storage.type" => color!(BLUE),
+            "keyword.directive" => italic!(GREY),
+            "diff.minus" => color!(RED),
+            "diff.plus" => color!(GREEN),
+            "boolean" => color!(BLUE),
+            "punctuation.special" | "text.title" => color!(ORANGE),
+            "definition.module" => color!(BLUE),
+            "property" => color!(MAGENTA),
+            "function" | "function.call" | "variable.other.member" => color!(GREEN),
+            "function.macro" => italic!(AQUA),
+            "function.method" | "constructor" | "method" => color!(CYAN),
+            "comment" => color!(DARK_GREY),
+            "operator" | "attribute" | "punctuation.bracket" => color!(GREY),
+            "string" | "string.special" | "comment.documentation" => color!(ORANGE),
+            "variable.builtin" | "conditional" | "repeat" | "keyword.function" | "keyword.return" => color!(BLUE),
+            "variable" | "variable.parameter" | "parameter" | "local.reference" => color!(MAGENTA),
+            "number" | "float" | "constant.numeric" => color!(YELLOW),
+            "type" | "type.builtin" | "type.definition" | "namespace" => color!(CYAN),
+            "type.enum.variant" => color!(BLUE),
+            "constant" | "constant.builtin" => color!(BLUE),
+            "punctuation" | "punctuation.delimiter" => crcolor!(White),
+            "label" => crcolor!(Green),
+            "module" | "include" => color!(BLUE),
+            "error" => crcolor!(Red),
+            _ => crcolor!(Reset),
         },
     }
 }

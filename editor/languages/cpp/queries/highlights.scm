@@ -249,7 +249,6 @@
 (call_expression
   function: (field_expression
     field: (field_identifier) @function))
-(call_expression (argument_list (identifier) @variable))
 (function_declarator
   declarator: [(identifier) (field_identifier)] @function)
 (parameter_declaration
@@ -271,7 +270,19 @@
 
 ((identifier) @constant
   (#match? @constant "^[A-Z][A-Z\\d_]*$"))
+  
+(function_definition
+  declarator: (function_declarator
+    declarator: (identifier) @function))
 
-(identifier) @variable
+(call_expression
+    function: (_) @function
+    (argument_list
+      ((identifier) @variable
+       (#not-eq? @variable @function))))
+
+((identifier) @variable
+    (#not-has-ancestor? @variable function_definition)
+    (#not-has-ancestor? @variable function_declarator))
 
 (comment) @comment

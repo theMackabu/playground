@@ -26,3 +26,24 @@ macro_rules! define_themes {
 		}
 	};
 }
+
+#[macro_export]
+macro_rules! crcolor {
+    ($color:ident) => {
+        (crossterm::style::Color::$color, None)
+    };
+}
+
+#[macro_export]
+macro_rules! color {
+    ($color:ident) => {
+        (Colors::$color, None)
+    };
+}
+
+#[macro_export]
+macro_rules! italic {
+    ($color:ident) => {
+        (Colors::$color, Some(Attribute::Italic))
+    };
+}
