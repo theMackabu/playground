@@ -40,6 +40,32 @@ pub struct Keybinds {
 }
 
 impl Keybinds {
+    const KEYBIND_DEFAULTS: [(&'static str, &'static str); 23] = [
+        ("quit", "Ctrl+Q"),
+        ("save", "Ctrl+S"),
+        ("discard_changes", "Ctrl+A"),
+        ("undo", "Ctrl+Z"),
+        ("redo", "Ctrl+Y"),
+        ("copy", "Ctrl+C"),
+        ("paste", "Ctrl+V"),
+        ("cut", "Ctrl+X"),
+        ("system_copy", "Alt+C"),
+        ("system_paste", "Alt+V"),
+        ("system_cut", "Alt+X"),
+        ("move_up", "Up"),
+        ("move_down", "Down"),
+        ("move_left", "Left"),
+        ("move_right", "Right"),
+        ("move_word_left", "Ctrl+Left"),
+        ("move_word_right", "Ctrl+Right"),
+        ("move_to_start_of_line", "Home"),
+        ("move_to_end_of_line", "End"),
+        ("page_up", "PageUp"),
+        ("page_down", "PageDown"),
+        ("half_page_up", "Ctrl+U"),
+        ("half_page_down", "Ctrl+D"),
+    ];
+
     pub fn get_keybind(&self, key: &str) -> Cow<'_, str> {
         match key {
             "quit" => self.quit.as_deref(),
@@ -71,34 +97,9 @@ impl Keybinds {
         .unwrap_or_else(|| Cow::Borrowed(Self::default_for(key)))
     }
 
-    fn default_for(key: &str) -> &'static str {
-        match key {
-            "quit" => "Ctrl+Q",
-            "save" => "Ctrl+S",
-            "discard_changes" => "Ctrl+A",
-            "undo" => "Ctrl+Z",
-            "redo" => "Ctrl+Y",
-            "copy" => "Ctrl+C",
-            "paste" => "Ctrl+V",
-            "cut" => "Ctrl+X",
-            "system_copy" => "Alt+C",
-            "system_paste" => "Alt+V",
-            "system_cut" => "Alt+X",
-            "move_up" => "Up",
-            "move_down" => "Down",
-            "move_left" => "Left",
-            "move_right" => "Right",
-            "move_word_left" => "Ctrl+Left",
-            "move_word_right" => "Ctrl+Right",
-            "move_to_start_of_line" => "Home",
-            "move_to_end_of_line" => "End",
-            "page_up" => "PageUp",
-            "page_down" => "PageDown",
-            "half_page_up" => "Ctrl+U",
-            "half_page_down" => "Ctrl+D",
-            _ => "",
-        }
-    }
+    pub fn iter(&self) -> impl Iterator<Item = (&str, String)> + '_ { Self::KEYBIND_DEFAULTS.iter().map(|&(action, _)| (action, self.get_keybind(action).into_owned())) }
+
+    fn default_for(key: &str) -> &'static str { Self::KEYBIND_DEFAULTS.iter().find(|&&(action, _)| action == key).map(|&(_, default)| default).unwrap_or("") }
 }
 
 #[cfg(feature = "debugger")]

@@ -31,3 +31,4 @@ fn main() {
     println!("list_dyn: {list_dyn:?}, len {}", list_dyn.len());
     println!("list_from: {list_from:?}, len {}", list_from.len());
 }
+

@@ -26,6 +26,7 @@ pub enum UiEvent {
     ScrollPage(Scroll),
     ScrollBy(isize),
     Nothing,
+    Quit,
 }
 
 #[derive(Copy, Clone)]

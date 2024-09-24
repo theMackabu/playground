@@ -37,23 +37,6 @@ macro_rules! debug {
     }
 }
 
-macro_rules! match_keybind {
-    ($keybinds:expr, $action:ident, $code:expr, $modifiers:expr, $block:block) => {
-        let keybind_str = $keybinds.get_keybind(stringify!($action));
-        debug!("Checking keybind for {}: {}", stringify!($action), keybind_str);
-        if let Some((kb_mod, kb_code)) = parse_keybind(&keybind_str) {
-            debug!("Parsed keybind: {:?} {:?}", kb_mod, kb_code);
-            debug!("Received event: {:?} {:?}", $modifiers, $code);
-            if $code == kb_code && $modifiers == kb_mod {
-                debug!("Keybind matched!");
-                $block
-            }
-        } else {
-            debug!("Failed to parse keybind");
-        }
-    };
-}
-
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     style::{Color, Stylize},
@@ -135,7 +118,7 @@ pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSetting
 }
 
 fn parse_keybind(keybind: &str) -> Option<(KeyModifiers, KeyCode)> {
-    let parts: Vec<&str> = keybind.split('+').collect();
+    let parts: Vec<&str> = keybind.split('+').map(str::trim).collect();
     let mut modifiers = KeyModifiers::empty();
     let key_code = parts.last()?;
 
@@ -158,14 +141,185 @@ fn parse_keybind(keybind: &str) -> Option<(KeyModifiers, KeyCode)> {
         "pageup" => KeyCode::PageUp,
         "pagedown" => KeyCode::PageDown,
         "tab" => KeyCode::Tab,
+        "backtab" => KeyCode::BackTab,
         "backspace" => KeyCode::Backspace,
         "enter" => KeyCode::Enter,
         "esc" => KeyCode::Esc,
-        s if s.len() == 1 => KeyCode::Char(s.chars().next()?.to_ascii_lowercase()),
+        "insert" => KeyCode::Insert,
+        "delete" => KeyCode::Delete,
+        "f1" => KeyCode::F(1),
+        "f2" => KeyCode::F(2),
+        "f3" => KeyCode::F(3),
+        "f4" => KeyCode::F(4),
+        "f5" => KeyCode::F(5),
+        "f6" => KeyCode::F(6),
+        "f7" => KeyCode::F(7),
+        "f8" => KeyCode::F(8),
+        "f9" => KeyCode::F(9),
+        "f10" => KeyCode::F(10),
+        "f11" => KeyCode::F(11),
+        "f12" => KeyCode::F(12),
+        s if s.len() == 1 => KeyCode::Char(s.chars().next().unwrap().to_ascii_lowercase()),
         _ => return None,
     };
 
     Some((modifiers, key_code))
+}
+
+fn handle_key_event(
+    event: KeyEvent, editor: &mut TextEditor<TermLineLayoutSettings>, keybinds: &config::Keybinds, clip: &mut String, system_clip: &mut Option<Clipboard>, file_path: &Path, width: usize,
+    height: usize, relative_line_numbers: bool, current_buffer: &mut Vec<Char>,
+) -> UiEvent {
+    let KeyEvent { code, modifiers, .. } = event;
+
+    debug!("Received key event: {:?} {:?}", code, modifiers);
+
+    for (action, keybind) in keybinds.iter() {
+        if let Some((kb_mod, kb_code)) = parse_keybind(&keybind) {
+            if code == kb_code && modifiers == kb_mod {
+                debug!("Matched keybind for action: {}", action);
+                return perform_action(action, editor, clip, system_clip, file_path, width, height, relative_line_numbers, current_buffer);
+            }
+        }
+    }
+
+    match code {
+        KeyCode::Char(c) => editor.insert_character_at_cursor(c),
+        KeyCode::Enter => editor.insert_newline_at_cursor(),
+        KeyCode::Tab => editor.insert_tab_at_cursor(),
+        KeyCode::Backspace => editor.remove_character_or_selection_at_cursor(true),
+        KeyCode::Delete => editor.remove_character_or_selection_at_cursor(false),
+        _ => {}
+    }
+
+    UiEvent::Nothing
+}
+
+fn perform_action(
+    action: &str, editor: &mut TextEditor<TermLineLayoutSettings>, clip: &mut String, system_clip: &mut Option<Clipboard>, file_path: &Path, width: usize, height: usize, relative_line_numbers: bool,
+    current_buffer: &mut Vec<Char>,
+) -> UiEvent {
+    match action {
+        "quit" => {
+            if editor.has_changed_since_save() {
+                match prompt_save(editor, width, height, file_path, relative_line_numbers) {
+                    SavePromptResult::Save => {
+                        let string = editor.to_string();
+                        if std::fs::create_dir_all(file_path.parent().unwrap()).is_ok() && std::fs::write(file_path, string).is_ok() {
+                            editor.set_saved();
+                        }
+                        UiEvent::Quit
+                    }
+                    SavePromptResult::DontSave => UiEvent::Quit,
+                    SavePromptResult::Cancel(next_buffer) => {
+                        CommandLine::set("");
+                        *current_buffer = next_buffer;
+                        let cursor_position = editor.get_cursor_pos();
+                        render(width, Some(cursor_position), current_buffer, &[]);
+                        UiEvent::Nothing
+                    }
+                }
+            } else {
+                UiEvent::Quit
+            }
+        }
+        "save" => {
+            let string = editor.to_string();
+            if std::fs::create_dir_all(file_path.parent().unwrap()).is_ok() && std::fs::write(file_path, string).is_ok() {
+                editor.set_saved();
+            }
+            UiEvent::Nothing
+        }
+        "discard_changes" => {
+            editor.discard_changes();
+            UiEvent::Nothing
+        }
+        "undo" => {
+            editor.undo();
+            UiEvent::Nothing
+        }
+        "redo" => {
+            editor.redo();
+            UiEvent::Nothing
+        }
+        "copy" => {
+            if let Some(x) = editor.get_selection() {
+                *clip = x;
+            }
+            UiEvent::Nothing
+        }
+        "paste" => {
+            if !clip.is_empty() {
+                editor.insert_string_at_cursor(clip);
+            }
+            UiEvent::Nothing
+        }
+        "cut" => {
+            if let Some(x) = editor.cut_selection() {
+                *clip = x;
+            }
+            UiEvent::Nothing
+        }
+        "system_copy" => {
+            if let Some(x) = editor.get_selection() {
+                system_clip.as_mut().map(|y| y.set_text(x));
+            }
+            UiEvent::Nothing
+        }
+        "system_paste" => {
+            if let Some(x) = system_clip.as_mut() {
+                if let Ok(y) = x.get_text() {
+                    if !y.is_empty() {
+                        editor.insert_string_at_cursor(&y);
+                    }
+                }
+            }
+            UiEvent::Nothing
+        }
+        "system_cut" => {
+            if let Some(x) = editor.cut_selection() {
+                system_clip.as_mut().map(|y| y.set_text(x));
+            }
+            UiEvent::Nothing
+        }
+        "move_up" => {
+            editor.move_cursor_vertical(-1, false, false);
+            UiEvent::Nothing
+        }
+        "move_down" => {
+            editor.move_cursor_vertical(1, false, false);
+            UiEvent::Nothing
+        }
+        "move_left" => {
+            editor.move_cursor_horizontal(-1, false, true);
+            UiEvent::Nothing
+        }
+        "move_right" => {
+            editor.move_cursor_horizontal(1, false, true);
+            UiEvent::Nothing
+        }
+        "move_word_left" => {
+            editor.move_cursor_horizontal_words(-1, false, true);
+            UiEvent::Nothing
+        }
+        "move_word_right" => {
+            editor.move_cursor_horizontal_words(1, false, true);
+            UiEvent::Nothing
+        }
+        "move_to_start_of_line" => {
+            editor.move_cursor_to_start_of_line(false, true);
+            UiEvent::Nothing
+        }
+        "move_to_end_of_line" => {
+            editor.move_cursor_to_end_of_line(false, true);
+            UiEvent::Nothing
+        }
+        "page_up" => UiEvent::ScrollPage(Scroll::Up(Size::Full)),
+        "page_down" => UiEvent::ScrollPage(Scroll::Down(Size::Full)),
+        "half_page_up" => UiEvent::ScrollPage(Scroll::Up(Size::Half)),
+        "half_page_down" => UiEvent::ScrollPage(Scroll::Down(Size::Half)),
+        _ => UiEvent::Nothing,
+    }
 }
 
 fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
@@ -208,151 +362,26 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
 
                     current_buffer = next_buffer;
                 }
-                Event::Key(KeyEvent { code, modifiers, .. }) => {
-                    let mut ui_event = UiEvent::Nothing;
+                Event::Key(key_event) => {
+                    let ui_event = handle_key_event(
+                        key_event,
+                        &mut editor,
+                        &keybinds,
+                        &mut clip,
+                        &mut system_clip,
+                        &file_path,
+                        width as usize,
+                        height as usize,
+                        relative_line_numbers,
+                        &mut current_buffer,
+                    );
 
-                    debug!("Received key event: {:?} {:?}", code, modifiers);
-
-                    match_keybind!(keybinds, quit, code, modifiers, {
-                        if editor.has_changed_since_save() {
-                            match prompt_save(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers) {
-                                SavePromptResult::Save => {
-                                    break;
-                                }
-                                SavePromptResult::DontSave => break,
-                                SavePromptResult::Cancel(next_buffer) => {
-                                    CommandLine::set("");
-                                    render(width as usize, cursor_position, &next_buffer, &current_buffer);
-                                    current_buffer = next_buffer;
-                                }
-                            }
-                        } else {
-                            break;
-                        }
-                    });
-
-                    match_keybind!(keybinds, save, code, modifiers, {
-                        let string = editor.to_string();
-                        if std::fs::create_dir_all(file_path.as_path().parent().unwrap()).is_ok() && std::fs::write(file_path.as_path(), string).is_ok() {
-                            editor.set_saved();
-                        }
-                    });
-
-                    match_keybind!(keybinds, discard_changes, code, modifiers, {
-                        editor.discard_changes();
-                    });
-
-                    match_keybind!(keybinds, undo, code, modifiers, {
-                        editor.undo();
-                    });
-
-                    match_keybind!(keybinds, redo, code, modifiers, {
-                        editor.redo();
-                    });
-
-                    match_keybind!(keybinds, copy, code, modifiers, {
-                        if let Some(x) = editor.get_selection() {
-                            clip = x;
-                        }
-                    });
-
-                    match_keybind!(keybinds, paste, code, modifiers, {
-                        if !clip.is_empty() {
-                            editor.insert_string_at_cursor(&clip);
-                        }
-                    });
-
-                    match_keybind!(keybinds, cut, code, modifiers, {
-                        if let Some(x) = editor.cut_selection() {
-                            clip = x;
-                        }
-                    });
-
-                    match_keybind!(keybinds, system_copy, code, modifiers, {
-                        if let Some(x) = editor.get_selection() {
-                            system_clip.as_mut().map(|y| y.set_text(x));
-                        }
-                    });
-
-                    match_keybind!(keybinds, system_paste, code, modifiers, {
-                        if let Some(x) = system_clip.as_mut() {
-                            if let Ok(y) = x.get_text() {
-                                if !y.is_empty() {
-                                    editor.insert_string_at_cursor(&y);
-                                }
-                            }
-                        }
-                    });
-
-                    match_keybind!(keybinds, system_cut, code, modifiers, {
-                        if let Some(x) = editor.cut_selection() {
-                            system_clip.as_mut().map(|y| y.set_text(x));
-                        }
-                    });
-
-                    match_keybind!(keybinds, move_up, code, modifiers, {
-                        editor.move_cursor_vertical(-1, modifiers.contains(KeyModifiers::SHIFT), false);
-                    });
-
-                    match_keybind!(keybinds, move_down, code, modifiers, {
-                        editor.move_cursor_vertical(1, modifiers.contains(KeyModifiers::SHIFT), false);
-                    });
-
-                    match_keybind!(keybinds, move_left, code, modifiers, {
-                        editor.move_cursor_horizontal(-1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, move_right, code, modifiers, {
-                        editor.move_cursor_horizontal(1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, move_word_left, code, modifiers, {
-                        editor.move_cursor_horizontal_words(-1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, move_word_right, code, modifiers, {
-                        editor.move_cursor_horizontal_words(1, modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, move_to_start_of_line, code, modifiers, {
-                        editor.move_cursor_to_start_of_line(modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, move_to_end_of_line, code, modifiers, {
-                        editor.move_cursor_to_end_of_line(modifiers.contains(KeyModifiers::SHIFT), true);
-                    });
-
-                    match_keybind!(keybinds, page_up, code, modifiers, {
-                        ui_event = UiEvent::ScrollPage(Scroll::Up(Size::Full));
-                    });
-
-                    match_keybind!(keybinds, page_down, code, modifiers, {
-                        ui_event = UiEvent::ScrollPage(Scroll::Down(Size::Full));
-                    });
-
-                    match_keybind!(keybinds, half_page_up, code, modifiers, {
-                        ui_event = UiEvent::ScrollPage(Scroll::Up(Size::Half));
-                    });
-
-                    match_keybind!(keybinds, half_page_down, code, modifiers, {
-                        ui_event = UiEvent::ScrollPage(Scroll::Down(Size::Half));
-                    });
-
-                    if let KeyCode::Char(c) = code {
-                        editor.insert_character_at_cursor(c);
-                    } else if code == KeyCode::Enter {
-                        editor.insert_newline_at_cursor();
-                    } else if code == KeyCode::Tab {
-                        editor.insert_tab_at_cursor();
-                    } else if code == KeyCode::Backspace {
-                        editor.remove_character_or_selection_at_cursor(true);
-                    } else if code == KeyCode::Delete {
-                        editor.remove_character_or_selection_at_cursor(false);
+                    if ui_event == UiEvent::Quit {
+                        break;
                     }
 
                     let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, ui_event);
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
-
                     current_buffer = next_buffer;
                 }
 
