@@ -385,6 +385,13 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                     current_buffer = next_buffer;
                 }
 
+                Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollUp, .. }) => {
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(-1));
+
+                    render(width as usize, cursor_position, &next_buffer, &current_buffer);
+                    current_buffer = next_buffer;
+                }
+
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollDown, .. }) => {
                     let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(1));
 
