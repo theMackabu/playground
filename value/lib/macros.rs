@@ -9,6 +9,13 @@ macro_rules! _impl_from_for_value {
                 }
             }
         )+
+
+        #[cfg(not(feature = "serde"))]
+        impl From<&'static [Value]> for Value {
+            fn from(item: &'static [Value]) -> Self {
+                Value::Slice(item)
+            }
+        }
     };
 }
 
@@ -29,6 +36,19 @@ macro_rules! _impl_value_methods {
                     }
                 }
             )+
+
+            #[cfg(not(feature = "serde"))]
+            pub fn as_slice(&self) -> Option<&'static [Value]> {
+                match self {
+                    Value::Slice(v) => Some(v),
+                    _ => None,
+                }
+            }
+
+            #[cfg(not(feature = "serde"))]
+            pub fn is_slice(&self) -> bool {
+                matches!(self, Value::Slice(_))
+            }
 
             pub fn to_value(self) -> Value {
                 self

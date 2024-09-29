@@ -6,6 +6,9 @@ mod macros;
 use display::{init_registry, FORMATTER_REGISTRY};
 use macros::{impl_for, impl_methods};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use std::{
     any::TypeId,
     collections::HashMap,
@@ -14,6 +17,7 @@ use std::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum Value {
     Null,
     Bool(bool),
@@ -22,6 +26,7 @@ pub enum Value {
     String(String),
     Static(&'static str),
     Array(Vec<Value>),
+    #[cfg(not(feature = "serde"))]
     Slice(&'static [Value]),
     Object(HashMap<String, Value>),
 }
@@ -37,6 +42,7 @@ impl Display for Value {
             Value::String(_) => TypeId::of::<String>(),
             Value::Static(_) => TypeId::of::<&'static str>(),
             Value::Array(_) => TypeId::of::<Vec<Value>>(),
+            #[cfg(not(feature = "serde"))]
             Value::Slice(_) => TypeId::of::<&'static [Value]>(),
             Value::Object(_) => TypeId::of::<HashMap<String, Value>>(),
         };
@@ -50,6 +56,7 @@ impl Display for Value {
                 Value::String(s) => s,
                 Value::Static(s) => s,
                 Value::Array(a) => a,
+                #[cfg(not(feature = "serde"))]
                 Value::Slice(s) => s,
                 Value::Object(o) => o,
             };
@@ -82,7 +89,6 @@ impl_for! {
     usize => Number,
     String => String,
     &'static str => Static,
-    &'static [Value] => Slice,
     HashMap<String, Value> => Object
 }
 
@@ -102,7 +108,6 @@ impl_methods! {
     String => String, as_string, is_string;
     Static => &'static str, as_str, is_str;
     Array => Vec<Value>, as_array, is_array;
-    Slice => &'static [Value], as_slice, is_slice;
     Object => HashMap<String, Value>, as_object, is_object;
 }
 
@@ -119,6 +124,7 @@ mod tests {
         assert_eq!(Value::String("hello".to_string()), Value::from("hello".to_string()));
         assert_eq!(Value::Static("static"), Value::from("static"));
         assert_eq!(Value::Array(vec![Value::Null]), Value::from(vec![Value::Null]));
+        #[cfg(not(feature = "serde"))]
         assert_eq!(Value::Slice(&[Value::Null]), Value::from(&[Value::Null][..]));
 
         let mut map = HashMap::new();
@@ -166,9 +172,12 @@ mod tests {
         assert!(array_val.is_array());
         assert_eq!(array_val.as_array(), Some(vec![Value::Null]));
 
-        let slice_val = Value::Slice(&[Value::Null]);
-        assert!(slice_val.is_slice());
-        assert_eq!(slice_val.as_slice(), Some(&[Value::Null][..]));
+        #[cfg(not(feature = "serde"))]
+        {
+            let slice_val = Value::Slice(&[Value::Null]);
+            assert!(slice_val.is_slice());
+            assert_eq!(slice_val.as_slice(), Some(&[Value::Null][..]));
+        }
 
         let mut map = HashMap::new();
         map.insert("key".to_string(), Value::Null);
@@ -186,6 +195,7 @@ mod tests {
         assert_eq!(format!("{}", Value::String("hello".to_string())), "hello");
         assert_eq!(format!("{}", Value::Static("static")), "static");
         assert_eq!(format!("{}", Value::Array(vec![Value::Null])), "[null]");
+        #[cfg(not(feature = "serde"))]
         assert_eq!(format!("{}", Value::Slice(&[Value::Null])), "[null]");
 
         let mut map = HashMap::new();

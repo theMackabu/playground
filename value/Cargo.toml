@@ -1,6 +1,6 @@
 [package]
 name = "dare"
-version = "0.0.2"
+version = "0.0.3"
 license = "MIT"
 edition = "2021"
 description = "daring flexible data representation"
@@ -8,3 +8,9 @@ description = "daring flexible data representation"
 [lib]
 name = "dare"
 path = "lib/value.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"], optional = true }
+
+[features]
+serde = ["dep:serde"]
