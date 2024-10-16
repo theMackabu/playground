@@ -47,6 +47,9 @@ impl Language {
                 .flag_if_supported("-w")
                 .flag_if_supported("-s")
                 .flag_if_supported("-O2")
+                .flag_if_supported("-fvisibility=default")
+                .flag_if_supported("-fno-exceptions")
+                .flag_if_supported("-fno-rtti")
                 .file(&scanner_path)
                 .compile(&format!("{}-scanner", self.name));
         }
