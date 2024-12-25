@@ -440,7 +440,9 @@ fn prompt_save(mut editor: &mut TextEditor<TermLineLayoutSettings>, width: usize
     }
 }
 
+/// micro¹ replacement text editor (for cats)
 #[derive(Parser)]
+#[command(version, about, long_about = None)]
 struct Args {
     #[arg()]
     /// File to edit
