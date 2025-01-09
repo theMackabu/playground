@@ -2,13 +2,11 @@ mod verbose;
 
 use clap::Parser;
 use fast_server::DEFAULT_PORT;
-use std::path::PathBuf;
+use std::{env::consts, path::PathBuf, process};
 use tokio::net::TcpListener;
 use tokio::signal;
+use tracing_subscriber::fmt::format::FmtSpan;
 use verbose::{InfoLevel, Verbosity};
-
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::prelude::*;
 
 #[derive(Parser, Debug)]
 #[command(name = "fast-server", version)]
@@ -30,18 +28,24 @@ struct Cli {
 pub async fn main() -> fast_proto::Result<()> {
     let cli = Cli::parse();
 
-    let formatting_layer_config = BunyanFormattingLayer::new("fast-server".into(), std::io::stdout)
-        .skip_fields(vec!["file", "line"].into_iter())
-        .expect("Unable to create logger");
-
-    tracing_subscriber::registry()
-        .with(cli.verbose.log_level_filter())
-        .with(JsonStorageLayer)
-        .with(formatting_layer_config)
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_thread_names(true)
+        .with_thread_ids(true)
+        .with_max_level(cli.verbose.log_level_filter())
         .init();
 
     let addr = format!("{}:{}", cli.host, cli.port);
     let listener = TcpListener::bind(&addr).await?;
+
+    println!(
+        "\n  FAST v{} {}-{}\n\n  Starting in standalone mode\n  Port: {}\n  PID: {}\n\n\n    https://themackabu.dev\n",
+        env!("CARGO_PKG_VERSION"),
+        consts::OS,
+        consts::ARCH,
+        cli.port,
+        process::id()
+    );
 
     Ok(fast_server::run(listener, signal::ctrl_c(), cli.state).await)
 }

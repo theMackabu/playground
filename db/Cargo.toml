@@ -30,7 +30,6 @@ fast-server = "0.0.1"
 parking_lot = "0.12.3"
 async-stream = "0.3.0"
 tokio-stream = "0.1.16"
-tracing-bunyan-formatter = "0.3.9"
 
 tokio = { version = "1.40.0", features = ["full"] }
 clap = { version = "4.5.17", features = ["derive"] }
