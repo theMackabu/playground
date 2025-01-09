@@ -3,12 +3,12 @@ version.workspace = true
 license.workspace = true
 edition.workspace = true
 
-name = "db-proto"
+name = "fast-proto"
 # readme = "../../README.md"
-description = ""
+description = "Protocol for the FAST database"
 
 [lib]
-name = "db_proto"
+name = "fast_proto"
 path = "lib.rs"
 
 [dependencies]

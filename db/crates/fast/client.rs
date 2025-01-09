@@ -1,4 +1,4 @@
-use db_proto::{clients::Client, DEFAULT_PORT};
+use fast_proto::{clients::Client, DEFAULT_PORT};
 
 use bytes::Bytes;
 use clap::{Parser, Subcommand};
@@ -70,7 +70,7 @@ enum Command {
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> db_proto::Result<()> {
+async fn main() -> fast_proto::Result<()> {
     let cli = Cli::parse();
     let addr = format!("{}:{}", cli.host, cli.port);
 
