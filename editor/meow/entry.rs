@@ -52,6 +52,15 @@ use std::{
 const PINK: Color = Color::Rgb { r: 225, g: 120, b: 216 };
 const BRIGHT_PINK: Color = Color::Rgb { r: 237, g: 171, b: 232 };
 
+fn get_version() -> &'static str {
+    let version = match env!("GIT_HASH") {
+        "" => format!("{} ({}) [{}]", env!("CARGO_PKG_VERSION"), env!("BUILD_DATE"), env!("PROFILE")),
+        hash => format!("{} ({} {hash}) [{}]", env!("CARGO_PKG_VERSION"), env!("BUILD_DATE"), env!("PROFILE")),
+    };
+
+    return Box::leak(Box::new(version));
+}
+
 fn setup_panic() {
     ::panic::setup_panic! {
         name: "Meow Editor",
@@ -212,7 +221,7 @@ fn perform_action(
                     }
                     SavePromptResult::DontSave => UiEvent::Quit,
                     SavePromptResult::Cancel(next_buffer) => {
-                        CommandLine::set("");
+                        CommandLine::set(String::new());
                         *current_buffer = next_buffer;
                         let cursor_position = editor.get_cursor_pos();
                         render(width, Some(cursor_position), current_buffer, &[]);
@@ -227,42 +236,50 @@ fn perform_action(
             let string = editor.to_string();
             if std::fs::create_dir_all(file_path.parent().unwrap()).is_ok() && std::fs::write(file_path, string).is_ok() {
                 editor.set_saved();
+                CommandLine::set_with_timeout(format!(" Saved {}", file_path.display()), 1500);
             }
             UiEvent::Nothing
         }
         "discard_changes" => {
             editor.discard_changes();
+            CommandLine::set_with_timeout("Discarded changes".into(), 1500);
             UiEvent::Nothing
         }
         "undo" => {
             editor.undo();
+            CommandLine::set_with_timeout("Undo changes".into(), 1500);
             UiEvent::Nothing
         }
         "redo" => {
             editor.redo();
+            CommandLine::set_with_timeout("Redo changes".into(), 1500);
             UiEvent::Nothing
         }
         "copy" => {
             if let Some(x) = editor.get_selection() {
                 *clip = x;
+                CommandLine::set_with_timeout("Copied to clipboard".into(), 1500);
             }
             UiEvent::Nothing
         }
         "paste" => {
             if !clip.is_empty() {
                 editor.insert_string_at_cursor(clip);
+                CommandLine::set_with_timeout("Pasted clipboard".into(), 1500);
             }
             UiEvent::Nothing
         }
         "cut" => {
             if let Some(x) = editor.cut_selection() {
                 *clip = x;
+                CommandLine::set_with_timeout("Cut to clipboard".into(), 1500);
             }
             UiEvent::Nothing
         }
         "system_copy" => {
             if let Some(x) = editor.get_selection() {
                 system_clip.as_mut().map(|y| y.set_text(x));
+                CommandLine::set_with_timeout("Copied to system clipboard".into(), 1500);
             }
             UiEvent::Nothing
         }
@@ -271,6 +288,7 @@ fn perform_action(
                 if let Ok(y) = x.get_text() {
                     if !y.is_empty() {
                         editor.insert_string_at_cursor(&y);
+                        CommandLine::set_with_timeout("Pasted system clipboard".into(), 1500);
                     }
                 }
             }
@@ -279,6 +297,7 @@ fn perform_action(
         "system_cut" => {
             if let Some(x) = editor.cut_selection() {
                 system_clip.as_mut().map(|y| y.set_text(x));
+                CommandLine::set_with_timeout("Cut to system clipboard".into(), 1500);
             }
             UiEvent::Nothing
         }
@@ -423,7 +442,7 @@ enum SavePromptResult {
 }
 
 fn prompt_save(mut editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, save_path: &Path, relative_line_numbers: bool) -> SavePromptResult {
-    CommandLine::set(" save changes to file before closing? (y,n,esc)");
+    CommandLine::set(format!(" Save changes to {} before closing? (y,n,esc)", save_path.display()));
 
     let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width, height as usize, &save_path, relative_line_numbers, UiEvent::Nothing);
     render(width as usize, cursor_position, &next_buffer, &[]);
@@ -440,13 +459,12 @@ fn prompt_save(mut editor: &mut TextEditor<TermLineLayoutSettings>, width: usize
     }
 }
 
-/// micro¹ replacement text editor (for cats)
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(version = get_version(), about, long_about = None)]
 struct Args {
     #[arg()]
     /// File to edit
-    #[arg(required_unless_present = "list_themes")]
+    #[arg(required_unless_present = "list_themes", required_unless_present = "config_path", required_unless_present = "edit_config")]
     file_path: Option<PathBuf>,
 
     /// Whether to allow mouse navigation
@@ -468,6 +486,14 @@ struct Args {
     /// List available themes
     #[arg(long)]
     list_themes: bool,
+
+    /// Display config path
+    #[arg(long)]
+    config_path: bool,
+
+    /// Edit the configuration
+    #[arg(long, short = 'E')]
+    edit_config: bool,
 }
 
 struct Parsed {
@@ -502,6 +528,11 @@ fn main() {
         return;
     }
 
+    if args.config_path {
+        println!("{}", config::config_dir().display());
+        return;
+    }
+
     #[cfg(feature = "debugger")]
     {
         if let Some(ref keybinds) = config.keybinds {
@@ -512,12 +543,12 @@ fn main() {
     }
 
     let args = Parsed {
-        file_path: args.file_path.unwrap(),
         theme: args.theme.or(config.theme),
         keybinds: config.keybinds.unwrap_or_default(),
         tab_width: args.tab_width.or(config.tab_width).unwrap_or(4),
         relative_line_numbers: args.relative_line_numbers.or(config.relative_line_numbers).unwrap_or(false),
         disable_mouse_interaction: args.disable_mouse_interaction.or(config.disable_mouse_interaction).unwrap_or(false),
+        file_path: args.file_path.unwrap_or_else(|| if args.edit_config { config::config_dir() } else { panic!("How did you get here") }),
     };
 
     let (file_content, is_newly_loaded) = match fs::read(&args.file_path.to_owned()) {

@@ -11,3 +11,4 @@ todo.*
 target
 fleet.toml
 *.bin
+*.fdb

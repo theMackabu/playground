@@ -1,7 +1,7 @@
 use crossterm::style::{Color, Stylize};
 use home::home_dir;
 use serde::Deserialize;
-use std::{borrow::Cow, fs, io::Write};
+use std::{borrow::Cow, fs, io::Write, path::PathBuf};
 
 #[derive(Deserialize, Default)]
 pub struct Config {
@@ -206,4 +206,11 @@ pub fn load() -> Config {
     } else {
         fs::read_to_string(&config_path).ok().and_then(|config_str| toml::from_str(&config_str).ok()).unwrap_or_default()
     }
+}
+
+pub fn config_dir() -> PathBuf {
+    let home = home_dir().expect("Home directory exists");
+    let config_dir = home.join(".config").join("meow");
+
+    config_dir.join("config.toml")
 }

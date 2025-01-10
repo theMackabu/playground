@@ -6,11 +6,9 @@ flags = "-O -C codegen-units=1"
 [project]
 name = "playground"
 
-[tasks.clean]
-script = ["rm -rf %{arg.1}/target", "mkdir %{arg.1}/target"]
-
-[tasks.run]
-script = ["maid build -q %{arg.1}", "./%{arg.1}/%{env.bin}/bin"]
+[tasks]
+clean.script = ["rm -rf %{arg.1}/target", "mkdir %{arg.1}/target"]
+run.script = ["maid build -q %{arg.1}", "./%{arg.1}/%{env.bin}/bin"]
 
 [tasks.build]
 depends = ["clean"]

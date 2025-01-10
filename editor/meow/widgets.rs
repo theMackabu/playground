@@ -1,4 +1,7 @@
-use std::sync::{LazyLock, Mutex};
+use std::{
+    sync::{LazyLock, Mutex},
+    thread, time,
+};
 
 pub enum StatusBarItem {
     FilePath(String),
@@ -48,9 +51,20 @@ pub struct CommandLine<'a> {
 }
 
 impl<'a> CommandLine<'a> {
-    pub fn set(text: &str) {
+    pub fn set(text: String) {
         if let Ok(mut command_line) = COMMAND_LINE.lock() {
-            command_line.text = text.to_string();
+            command_line.text = text;
+        }
+    }
+
+    pub fn set_with_timeout(text: String, time: u64) {
+        if let Ok(mut command_line) = COMMAND_LINE.lock() {
+            command_line.text = text;
+
+            thread::spawn(move || {
+                thread::sleep(time::Duration::from_millis(time));
+                CommandLine::set(String::new());
+            });
         }
     }
 
