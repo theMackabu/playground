@@ -16,7 +16,9 @@ name = "fast-server"
 path = "server.rs"
 
 [dependencies]
+shlex = "1.3.0"
 rustyline = "15.0.0"
+
 clap.workspace = true
 bytes.workspace = true
 tokio.workspace = true

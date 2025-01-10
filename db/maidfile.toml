@@ -3,5 +3,5 @@ name = "fast"
 version = "0.0.1"
 
 [tasks]
-cli.script = "fleet run -q --release --bin fast-cli %{arg.1} %{arg.2} %{arg.3}"
+cli.script = "fleet run -q --release --bin fast-cli"
 server.script = "fleet run --release --bin fast-server -- --state state.fdb"

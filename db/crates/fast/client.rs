@@ -1,18 +1,13 @@
 use fast_proto::{clients::Client, DEFAULT_PORT};
 
 use bytes::Bytes;
-use clap::{Parser, Subcommand};
-use std::num::ParseIntError;
-use std::path::PathBuf;
-use std::str;
-use std::time::Duration;
+use clap::Parser;
+use rustyline::{error::ReadlineError, DefaultEditor};
+use std::{path::Path, process, str, time::Duration};
 
 #[derive(Parser, Debug)]
-#[command(name = "db-client", version)]
+#[command(name = "fast-cli", version)]
 struct Cli {
-    #[clap(subcommand)]
-    command: Command,
-
     #[arg(id = "hostname", long, default_value = "127.0.0.1")]
     host: String,
 
@@ -20,53 +15,96 @@ struct Cli {
     port: u16,
 }
 
-#[derive(Subcommand, Debug)]
-enum Command {
-    Ping {
-        /// Message to ping
-        msg: Option<Bytes>,
-    },
-    /// Get the value of key.
-    Get {
-        /// Name of key to get
-        key: String,
-    },
-    /// Set key to hold the string value.
-    Set {
-        /// Name of key to set
-        key: String,
+async fn execute_command(client: &mut Option<Client>, cmd: String) -> fast_proto::Result<()> {
+    let mut lexer = shlex::Shlex::new(&cmd);
+    let args: Vec<String> = lexer.by_ref().collect();
 
-        /// Value to set.
-        value: Bytes,
+    if args.is_empty() {
+        return Err("Empty command".into());
+    }
 
-        /// Expire the value after specified amount of time
-        #[arg(value_parser = duration_from_ms_str)]
-        expires: Option<Duration>,
-    },
-    ///  Publisher to send a message to a specific channel.
-    Publish {
-        /// Name of channel
-        channel: String,
+    let conn = client.as_mut().ok_or("Not connected to the server")?;
 
-        /// Message to publish
-        message: Bytes,
-    },
-    /// Subscribe a client to a specific channel or channels.
-    Subscribe {
-        /// Specific channel or channels
-        channels: Vec<String>,
-    },
-    Dump {
-        /// Path to the output file (optional, defaults to "db-state.bin")
-        #[arg(long, default_value = "db-state.bin")]
-        output: PathBuf,
-    },
-    /// Load the database state from a file.
-    Load {
-        /// Path to the input file (optional, defaults to "db-state.bin")
-        #[arg(long, default_value = "db-state.bin")]
-        input: PathBuf,
-    },
+    match args[0].to_lowercase().as_str() {
+        "ping" => {
+            let msg = args[1..].join(" ");
+            let msg = if msg.is_empty() { None } else { Some(Bytes::from(msg)) };
+            let value = conn.ping(msg).await?;
+
+            println!("{}", str::from_utf8(&value)?)
+        }
+
+        "get" => {
+            let key = args.get(1).ok_or("GET command requires a key")?;
+            let value = conn.get(key).await?;
+
+            match value {
+                Some(v) => print_value(&v),
+                None => println!("(nil)"),
+            }
+        }
+
+        "set" => {
+            let key = args.get(1).ok_or("SET command requires a key")?;
+            let value = args.get(2).ok_or("SET command requires a value")?;
+
+            if let Some(ms) = args.get(3) {
+                let expires = Duration::from_millis(ms.parse()?);
+                conn.set_expires(key, Bytes::from(value.clone()), expires).await?;
+            } else {
+                conn.set(key, Bytes::from(value.clone())).await?;
+            }
+
+            println!("OK");
+        }
+
+        "publish" => {
+            let channel = args.get(1).ok_or("Publish command requires a channel")?;
+            let message = args[2..].join(" ");
+
+            if message.is_empty() {
+                return Err("Publish command requires a message".into());
+            }
+
+            conn.publish(channel, Bytes::from(message)).await?;
+            println!("Publish OK");
+        }
+
+        "dump" => {
+            let output = args.get(1).map(String::as_str).unwrap_or("state.fdb");
+            conn.dump(Path::new(output)).await?;
+            println!("Database state dumped to {:?}", output);
+        }
+
+        "load" => {
+            let input = args.get(1).map(String::as_str).unwrap_or("state.fdb");
+            conn.load(Path::new(input)).await?;
+            println!("Database state loaded from {:?}", input);
+        }
+
+        "subscribe" => {
+            let channels = args.get(1..).ok_or("Subscribe command requires at least one channel")?.to_vec();
+            let conn = client.take().ok_or("Not connected to the server")?;
+
+            println!("Reading messages... (Ctrl+C to quit)");
+
+            let mut messages = 0;
+            let mut subscriber = conn.subscribe(channels).await?;
+
+            while let Some(msg) = subscriber.next_message().await? {
+                print!("\r{messages}) ");
+                print_value(&msg.content);
+                messages += 1;
+            }
+        }
+
+        "help" | "?" => print_help(),
+        "exit" | "quit" => process::exit(0),
+
+        _ => return Err(format!("Unknown command '{}'", args[0]).into()),
+    }
+
+    Ok(())
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -74,64 +112,55 @@ async fn main() -> fast_proto::Result<()> {
     let cli = Cli::parse();
     let addr = format!("{}:{}", cli.host, cli.port);
 
-    let mut client = Client::connect(&addr).await?;
+    let mut rl = DefaultEditor::new()?;
+    let mut client = Some(Client::connect(&addr).await?);
 
-    match cli.command {
-        Command::Ping { msg } => {
-            let value = client.ping(msg).await?;
-            if let Ok(string) = str::from_utf8(&value) {
-                println!("\"{}\"", string);
-            } else {
-                println!("{:?}", value);
-            }
-        }
-        Command::Get { key } => {
-            if let Some(value) = client.get(&key).await? {
-                if let Ok(string) = str::from_utf8(&value) {
-                    println!("\"{}\"", string);
-                } else {
-                    println!("{:?}", value);
+    loop {
+        let repl = rl.readline(&format!("{addr}> "));
+
+        match repl {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str())?;
+
+                if let Err(error) = execute_command(&mut client, line).await {
+                    println!("(error) {error}");
+
+                    if client.is_none() {
+                        println!("Reconnecting to the server...");
+                        client = Some(Client::connect(&addr).await?);
+                    }
                 }
-            } else {
-                println!("(nil)");
             }
-        }
-        Command::Set { key, value, expires: None } => {
-            client.set(&key, value).await?;
-            println!("OK");
-        }
-        Command::Set { key, value, expires: Some(expires) } => {
-            client.set_expires(&key, value, expires).await?;
-            println!("OK");
-        }
-        Command::Publish { channel, message } => {
-            client.publish(&channel, message).await?;
-            println!("Publish OK");
-        }
-        Command::Subscribe { channels } => {
-            if channels.is_empty() {
-                return Err("channel(s) must be provided".into());
-            }
-            let mut subscriber = client.subscribe(channels).await?;
-
-            while let Some(msg) = subscriber.next_message().await? {
-                println!("got message from the channel: {}; message = {:?}", msg.channel, msg.content);
-            }
-        }
-        Command::Dump { output } => {
-            client.dump(&output).await?;
-            println!("Database state dumped to {:?}", output);
-        }
-        Command::Load { input } => {
-            client.load(&input).await?;
-            println!("Database state loaded from {:?}", input);
+            Err(ReadlineError::Interrupted) => return Ok(()),
+            Err(ReadlineError::Eof) => return Ok(()),
+            Err(err) => panic!("unknown error '{err}'"),
         }
     }
-
-    Ok(())
 }
 
-fn duration_from_ms_str(src: &str) -> Result<Duration, ParseIntError> {
-    let ms = src.parse::<u64>()?;
-    Ok(Duration::from_millis(ms))
+fn print_value(value: &[u8]) {
+    if let Ok(string) = str::from_utf8(value) {
+        println!("\"{string}\"");
+    } else {
+        println!("{value:?}");
+    }
+}
+
+fn print_help() {
+    println!("Available commands:");
+    println!("  help                         Show this help message");
+    println!("  exit                         Exit the CLI (or use Ctrl+C)");
+    println!("  ping [message]               Ping the server with an optional message");
+    println!("  get <key>                    Get the value of a key");
+    println!("  set <key> <value> [expires]  Set a key-value pair with optional expiration in milliseconds");
+    println!("  publish <channel> <message>  Publish a message to a channel");
+    println!("  subscribe <channel...>       Subscribe to one or more channels");
+    println!("  dump [output]                Dump database state to a file (default: state.fdb)");
+    println!("  load [input]                 Load database state from a file (default: state.fdb)");
+    println!("\nExamples:");
+    println!("  set mykey myvalue");
+    println!("  set mykey myvalue 5000      (expires in 5 seconds)");
+    println!("  get mykey");
+    println!("  publish mychannel \"Hello World\"");
+    println!("  subscribe channel1 channel2");
 }
