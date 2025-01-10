@@ -1,4 +1,4 @@
-use fast_proto::{clients::Client, DEFAULT_PORT};
+use fast::prelude::*;
 
 use bytes::Bytes;
 use clap::Parser;
@@ -15,7 +15,7 @@ struct Cli {
     port: u16,
 }
 
-async fn execute_command(client: &mut Option<Client>, cmd: String) -> fast_proto::Result<()> {
+async fn execute_command(client: &mut Option<Client>, cmd: String) -> Result<()> {
     let mut lexer = shlex::Shlex::new(&cmd);
     let args: Vec<String> = lexer.by_ref().collect();
 
@@ -108,7 +108,7 @@ async fn execute_command(client: &mut Option<Client>, cmd: String) -> fast_proto
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> fast_proto::Result<()> {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
     let addr = format!("{}:{}", cli.host, cli.port);
 
