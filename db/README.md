@@ -1,4 +1,4 @@
-# FAST Database
+# Flexible Asynchronous Storage and Transport (FAST)
 
 FAST is a lightweight, high-performance key-value store and pub/sub server written in Rust. It provides a Redis-like interface with support for basic operations, expiring keys, and pub/sub messaging. Not fully compatible but works with some Redis projects like redis-cli, etc.
 

@@ -5,7 +5,7 @@ edition.workspace = true
 
 name = "fast-server"
 readme = "../../README.md"
-description = "Server for the FAST database"
+description = "Server internals for FAST"
 
 [lib]
 name = "fast_server"

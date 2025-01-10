@@ -5,7 +5,7 @@ edition.workspace = true
 
 name = "fast-proto"
 readme = "../../README.md"
-description = "Protocol for the FAST database"
+description = "Protocol internals for FAST"
 
 [lib]
 name = "fast_proto"

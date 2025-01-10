@@ -5,7 +5,7 @@ edition.workspace = true
 
 name = "fast"
 readme = "../../README.md"
-description = "the FAST database"
+description = "Flexible Asynchronous Storage and Transport "
 
 [lib]
 name = "fast"
