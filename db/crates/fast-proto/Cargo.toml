@@ -4,7 +4,7 @@ license.workspace = true
 edition.workspace = true
 
 name = "fast-proto"
-# readme = "../../README.md"
+readme = "../../README.md"
 description = "Protocol for the FAST database"
 
 [lib]

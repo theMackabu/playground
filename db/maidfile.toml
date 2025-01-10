@@ -1,6 +1,6 @@
 [project]
 name = "fast"
-version = "0.0.1"
+version = "0.1.3"
 
 [tasks]
 cli.script = "fleet run -q --release --bin fast-cli"

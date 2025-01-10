@@ -239,12 +239,12 @@ checksum = "a5d9305ccc6942a704f4335694ecd3de2ea531b114ac2d51f5f843750787a92f"
 
 [[package]]
 name = "fast"
-version = "0.0.1"
+version = "0.1.3"
 dependencies = [
  "bytes",
  "clap",
- "fast-proto",
- "fast-server",
+ "fast-proto 0.0.1",
+ "fast-server 0.0.1",
  "parking_lot",
  "rustyline",
  "shlex",
@@ -256,6 +256,22 @@ dependencies = [
 [[package]]
 name = "fast-proto"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c16f20a5b313101ac8f5e4716e0960f60c8af1e15e5d6942c5830bb82a53dd0d"
+dependencies = [
+ "async-stream",
+ "atoi",
+ "bincode",
+ "bytes",
+ "serde",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+]
+
+[[package]]
+name = "fast-proto"
+version = "0.1.3"
 dependencies = [
  "async-stream",
  "atoi",
@@ -270,8 +286,19 @@ dependencies = [
 [[package]]
 name = "fast-server"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08c5a90e476404261b141306d796d38a5d675c07fdce35a3dc4914c5ec9a7a66"
 dependencies = [
- "fast-proto",
+ "fast-proto 0.0.1",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "fast-server"
+version = "0.1.3"
+dependencies = [
+ "fast-proto 0.0.1",
  "tokio",
  "tracing",
 ]
