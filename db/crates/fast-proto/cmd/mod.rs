@@ -6,6 +6,7 @@ mod publish;
 mod set;
 mod subscribe;
 mod unknown;
+mod version;
 
 pub use dump::Dump;
 pub use get::Get;
@@ -15,6 +16,7 @@ pub use publish::Publish;
 pub use set::Set;
 pub use subscribe::{Subscribe, Unsubscribe};
 pub use unknown::Unknown;
+pub use version::Version;
 
 use crate::prelude::*;
 
@@ -26,6 +28,7 @@ pub enum Command {
     Subscribe(Subscribe),
     Unsubscribe(Unsubscribe),
     Ping(Ping),
+    Version(Version),
     Dump(Dump),
     Load(Load),
     Unknown(Unknown),
@@ -43,6 +46,7 @@ impl Command {
             "subscribe" => Command::Subscribe(Subscribe::parse_frames(&mut parse)?),
             "unsubscribe" => Command::Unsubscribe(Unsubscribe::parse_frames(&mut parse)?),
             "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
+            "version" => Command::Version(Version::parse_frames(&mut parse)?),
             "dump" => Command::Dump(Dump::parse_frames(&mut parse)?),
             "load" => Command::Load(Load::parse_frames(&mut parse)?),
             _ => return Ok(Command::Unknown(Unknown::new(command_name))),
@@ -61,6 +65,7 @@ impl Command {
             Set(cmd) => cmd.apply(db, dst).await,
             Subscribe(cmd) => cmd.apply(db, dst, shutdown).await,
             Ping(cmd) => cmd.apply(dst).await,
+            Version(cmd) => cmd.apply(dst).await,
             Dump(cmd) => cmd.apply(db, dst).await,
             Load(cmd) => cmd.apply(db, dst).await,
             Unknown(cmd) => cmd.apply(dst).await,
@@ -76,6 +81,7 @@ impl Command {
             Command::Subscribe(_) => "subscribe",
             Command::Unsubscribe(_) => "unsubscribe",
             Command::Ping(_) => "ping",
+            Command::Version(_) => "version",
             Command::Dump(_) => "dump",
             Command::Load(_) => "load",
             Command::Unknown(cmd) => cmd.get_name(),

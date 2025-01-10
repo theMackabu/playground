@@ -1,11 +1,10 @@
-use crate::cmd::{Dump, Get, Load, Ping, Publish, Set, Subscribe, Unsubscribe};
+use crate::cmd::{Dump, Get, Load, Ping, Publish, Set, Subscribe, Unsubscribe, Version};
 use crate::pkg::{Connection, Frame};
 
 use async_stream::try_stream;
 use bytes::Bytes;
 use std::io::{Error, ErrorKind};
-use std::path::Path;
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio_stream::Stream;
 use tracing::{debug, instrument};
@@ -31,6 +30,17 @@ impl Client {
         let connection = Connection::new(socket);
 
         Ok(Client { connection })
+    }
+
+    pub async fn version(&mut self) -> crate::Result<Bytes> {
+        let frame = Version::new().into_frame();
+        self.connection.write_frame(&frame).await?;
+
+        match self.read_response().await? {
+            Frame::Simple(value) => Ok(value.into()),
+            Frame::Bulk(value) => Ok(value),
+            frame => Err(frame.to_error()),
+        }
     }
 
     #[instrument(skip(self))]

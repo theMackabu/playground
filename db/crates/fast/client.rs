@@ -13,6 +13,38 @@ struct Cli {
 
     #[arg(long, default_value_t = DEFAULT_PORT)]
     port: u16,
+
+    #[arg(trailing_var_arg = true)]
+    command: Vec<String>,
+}
+
+async fn print_info(client: &mut Client, print_help: bool) -> Result<()> {
+    let version = client.version().await?;
+    let version_str = str::from_utf8(&version)?;
+
+    if print_help {
+        println!("FAST server {version_str}\n");
+        println!("Available commands:");
+        println!("  help                         Show this help message");
+        println!("  exit                         Exit the CLI (or use Ctrl+C)");
+        println!("  ping [message]               Ping the server with an optional message");
+        println!("  get <key>                    Get the value of a key");
+        println!("  set <key> <value> [expires]  Set a key-value pair with optional expiration in milliseconds");
+        println!("  publish <channel> <message>  Publish a message to a channel");
+        println!("  subscribe <channel...>       Subscribe to one or more channels");
+        println!("  dump [output]                Dump database state to a file (default: state.fdb)");
+        println!("  load [input]                 Load database state from a file (default: state.fdb)");
+        println!("\nExamples:");
+        println!("  set mykey myvalue");
+        println!("  set mykey myvalue 5000      (expires in 5 seconds)");
+        println!("  get mykey");
+        println!("  publish mychannel \"Hello World\"");
+        println!("  subscribe channel1 channel2");
+    } else {
+        println!("{version_str}");
+    }
+
+    Ok(())
 }
 
 async fn execute_command(client: &mut Option<Client>, cmd: String) -> Result<()> {
@@ -98,7 +130,8 @@ async fn execute_command(client: &mut Option<Client>, cmd: String) -> Result<()>
             }
         }
 
-        "help" | "?" => print_help(),
+        "help" | "?" => print_info(conn, true).await?,
+        "version" | "v" => print_info(conn, false).await?,
         "exit" | "quit" => process::exit(0),
 
         _ => return Err(format!("Unknown command '{}'", args[0]).into()),
@@ -111,9 +144,14 @@ async fn execute_command(client: &mut Option<Client>, cmd: String) -> Result<()>
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     let addr = format!("{}:{}", cli.host, cli.port);
+    let mut client = Some(Client::connect(&addr).await?);
+
+    if !cli.command.is_empty() {
+        let cmd = cli.command.join(" ");
+        return execute_command(&mut client, cmd).await;
+    }
 
     let mut rl = DefaultEditor::new()?;
-    let mut client = Some(Client::connect(&addr).await?);
 
     loop {
         let repl = rl.readline(&format!("{addr}> "));
@@ -144,23 +182,4 @@ fn print_value(value: &[u8]) {
     } else {
         println!("{value:?}");
     }
-}
-
-fn print_help() {
-    println!("Available commands:");
-    println!("  help                         Show this help message");
-    println!("  exit                         Exit the CLI (or use Ctrl+C)");
-    println!("  ping [message]               Ping the server with an optional message");
-    println!("  get <key>                    Get the value of a key");
-    println!("  set <key> <value> [expires]  Set a key-value pair with optional expiration in milliseconds");
-    println!("  publish <channel> <message>  Publish a message to a channel");
-    println!("  subscribe <channel...>       Subscribe to one or more channels");
-    println!("  dump [output]                Dump database state to a file (default: state.fdb)");
-    println!("  load [input]                 Load database state from a file (default: state.fdb)");
-    println!("\nExamples:");
-    println!("  set mykey myvalue");
-    println!("  set mykey myvalue 5000      (expires in 5 seconds)");
-    println!("  get mykey");
-    println!("  publish mychannel \"Hello World\"");
-    println!("  subscribe channel1 channel2");
 }
