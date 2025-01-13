@@ -59,6 +59,7 @@ Server options:
 - `--port`: Server port (default: 6379)
 - `--host`: Bind address (default: 127.0.0.1)
 - `--state`: Path to save/load database state
+- `--no-cache`: Disable state save on shutdown
 - `-v`: Increase logging verbosity
 - `-q`: Decrease logging verbosity
 
