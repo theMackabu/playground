@@ -22,11 +22,14 @@ struct Cli {
 
     #[arg(long, default_value = "state.kade", help = "Path to save/load database state")]
     state: Option<PathBuf>,
+
+    #[arg(long, help = "Disable state caching")]
+    no_cache: bool,
 }
 
 #[tokio::main]
 pub async fn main() -> kade_proto::Result<()> {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
 
     tracing_subscriber::fmt()
         .with_span_events(FmtSpan::CLOSE)
@@ -46,6 +49,10 @@ pub async fn main() -> kade_proto::Result<()> {
         cli.port,
         process::id()
     );
+
+    if cli.no_cache {
+        cli.state = None;
+    }
 
     Ok(kade_server::run(listener, signal::ctrl_c(), cli.state).await)
 }
