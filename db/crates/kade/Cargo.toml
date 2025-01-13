@@ -5,7 +5,7 @@ edition.workspace = true
 
 name = "kade"
 readme = "../../README.md"
-description = "Flexible Asynchronous Storage and Transport "
+description = "High-performance queue pipeline and key-value store"
 
 [lib]
 name = "kade"

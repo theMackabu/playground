@@ -1,6 +1,6 @@
-# <img src="" width="30" height="30" align="center" /> Kade
+# <img src="https://github.com/theMackabu/playground/blob/master/db/.github/kade.svg" width="30" height="30" align="center" /> Kade
 
-Cross platform high-performance queue pipeline KV store
+Cross-platform high-performance queue pipeline and key-value store
 
 Previously, tools like:
 

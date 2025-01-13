@@ -4,6 +4,7 @@ license.workspace = true
 edition.workspace = true
 
 name = "kade-server"
+readme = "../README.md"
 description = "Server internals for Kade"
 
 [lib]

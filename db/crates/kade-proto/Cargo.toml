@@ -4,7 +4,8 @@ license.workspace = true
 edition.workspace = true
 
 name = "kade-proto"
-description = "Protocol internals for kade"
+readme = "../README.md"
+description = "Protocol internals for Kade"
 
 [lib]
 name = "kade_proto"
