@@ -1,7 +1,7 @@
 mod verbose;
 
 use clap::Parser;
-use fast_server::DEFAULT_PORT;
+use kade_server::DEFAULT_PORT;
 use std::{env::consts, path::PathBuf, process};
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -9,7 +9,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use verbose::{InfoLevel, Verbosity};
 
 #[derive(Parser, Debug)]
-#[command(name = "fast-server", version)]
+#[command(name = "kade-server", version)]
 struct Cli {
     #[arg(long, default_value_t = DEFAULT_PORT)]
     port: u16,
@@ -20,12 +20,12 @@ struct Cli {
     #[clap(flatten)]
     verbose: Verbosity<InfoLevel>,
 
-    #[arg(long, help = "Path to save/load database state")]
+    #[arg(long, default_value = "state.kade", help = "Path to save/load database state")]
     state: Option<PathBuf>,
 }
 
 #[tokio::main]
-pub async fn main() -> fast_proto::Result<()> {
+pub async fn main() -> kade_proto::Result<()> {
     let cli = Cli::parse();
 
     tracing_subscriber::fmt()
@@ -39,7 +39,7 @@ pub async fn main() -> fast_proto::Result<()> {
     let listener = TcpListener::bind(&addr).await?;
 
     println!(
-        "\n  FAST v{} {}-{}\n\n  Starting in standalone mode\n  Port: {}\n  PID: {}\n\n\n    https://themackabu.dev\n",
+        "\n  Kade v{} {}-{}\n\n  Starting in standalone mode\n  Port: {}\n  PID: {}\n\n\n    https://themackabu.dev\n",
         env!("CARGO_PKG_VERSION"),
         consts::OS,
         consts::ARCH,
@@ -47,5 +47,5 @@ pub async fn main() -> fast_proto::Result<()> {
         process::id()
     );
 
-    Ok(fast_server::run(listener, signal::ctrl_c(), cli.state).await)
+    Ok(kade_server::run(listener, signal::ctrl_c(), cli.state).await)
 }

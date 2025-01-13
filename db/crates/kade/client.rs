@@ -1,4 +1,4 @@
-use fast::prelude::*;
+use kade::prelude::*;
 
 use bytes::Bytes;
 use clap::Parser;
@@ -6,7 +6,7 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use std::{path::Path, process, str, time::Duration};
 
 #[derive(Parser, Debug)]
-#[command(name = "fast-cli", version)]
+#[command(name = "kade-cli", version)]
 struct Cli {
     #[arg(id = "hostname", long, default_value = "127.0.0.1")]
     host: String,
@@ -23,7 +23,7 @@ async fn print_info(client: &mut Client, print_help: bool) -> Result<()> {
     let version_str = str::from_utf8(&version)?;
 
     if print_help {
-        println!("FAST server {version_str}\n");
+        println!("Kade server {version_str}\n");
         println!("Available commands:");
         println!("  help                         Show this help message");
         println!("  exit                         Exit the CLI (or use Ctrl+C)");
@@ -32,8 +32,8 @@ async fn print_info(client: &mut Client, print_help: bool) -> Result<()> {
         println!("  set <key> <value> [expires]  Set a key-value pair with optional expiration in milliseconds");
         println!("  publish <channel> <message>  Publish a message to a channel");
         println!("  subscribe <channel...>       Subscribe to one or more channels");
-        println!("  dump [output]                Dump database state to a file (default: state.fdb)");
-        println!("  load [input]                 Load database state from a file (default: state.fdb)");
+        println!("  dump [output]                Dump database state to a file (default: state.kade)");
+        println!("  load [input]                 Load database state from a file (default: state.kade)");
         println!("\nExamples:");
         println!("  set mykey myvalue");
         println!("  set mykey myvalue 5000      (expires in 5 seconds)");

@@ -1,4 +1,4 @@
-use fast_proto::{prelude::*, Result};
+use kade_proto::{prelude::*, Result};
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -7,7 +7,7 @@ use tokio::sync::{broadcast, mpsc, Semaphore};
 use tokio::time::{self, Duration};
 use tracing::{debug, error, info, instrument};
 
-pub use fast_proto::DEFAULT_PORT;
+pub use kade_proto::DEFAULT_PORT;
 pub const MAX_CONNECTIONS: usize = 250;
 
 #[derive(Debug)]

@@ -3,15 +3,14 @@ version.workspace = true
 license.workspace = true
 edition.workspace = true
 
-name = "fast-server"
-readme = "../../README.md"
-description = "Server internals for FAST"
+name = "kade-server"
+description = "Server internals for Kade"
 
 [lib]
-name = "fast_server"
+name = "kade_server"
 path = "server.rs"
 
 [dependencies]
 tokio.workspace = true
 tracing.workspace = true
-fast-proto.workspace = true
+kade-proto.workspace = true

@@ -3,12 +3,11 @@ version.workspace = true
 license.workspace = true
 edition.workspace = true
 
-name = "fast-proto"
-readme = "../../README.md"
-description = "Protocol internals for FAST"
+name = "kade-proto"
+description = "Protocol internals for kade"
 
 [lib]
-name = "fast_proto"
+name = "kade_proto"
 path = "lib.rs"
 
 [dependencies]

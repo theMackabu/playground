@@ -1,23 +1,34 @@
-# Flexible Asynchronous Storage and Transport (FAST)
+# <img src="" width="30" height="30" align="center" /> Kade
 
-FAST is a lightweight, high-performance key-value store and pub/sub server written in Rust. It provides a Redis-like interface with support for basic operations, expiring keys, and pub/sub messaging. Not fully compatible but works with some Redis projects like redis-cli, etc.
+Cross platform high-performance queue pipeline KV store
+
+Previously, tools like:
+
+- Redis required complex configuration
+- DynamoDB lacked simple local development
+- RabbitMQ needed heavy infrastructure setup
+
+Kade attempts to solve these problems:
+
+- It requires no configuration - just run and go
+- It provides simple persistence out of the box
+- Use it via CLI, libraries, or existing Redis tools!
 
 ## Features
 
 - Key expiration support
-- Messaging system
+- Subscription messaging system
 - Persistent storage capabilities
-- Support for both synchronous and asynchronous clients
+- Both sync and async client support
 - Connection pooling and buffered operations
-- Clean shutdown with state preservation
-- Cross-platform support
+- Graceful shutdown with state preservation
 
 ### Basic Usage
 
 Here's a simple example demonstrating basic key-value operations:
 
 ```rust
-use fast::prelude::*;
+use kade::prelude::*;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -36,11 +47,11 @@ pub async fn main() -> Result<()> {
 
 ### Running the Server
 
-Start the FAST server using the provided binary:
+Start the Kade server using the provided binary:
 
 ```bash
             # optional storage dir
-fast-server --state cached-data.fdb
+kade-server --state cached-data.kade
 ```
 
 Server options:
@@ -53,7 +64,7 @@ Server options:
 
 ### Using the CLI
 
-FAST comes with an interface (`fast-cli`) for interacting with the server:
+Kade comes with an interface (`kade-cli`) for interacting with the server:
 
 Example commands:
 
@@ -88,7 +99,7 @@ Publish OK
 
 ### Client Libraries
 
-FAST provides multiple client implementations:
+Kade provides multiple client implementations:
 
 1. **Async Client** (`Client`):
 
@@ -113,10 +124,10 @@ More will be added for other languages soon.
 
 ## Architecture
 
-FAST is built with a modular architecture:
+Kade is built with a modular architecture:
 
-- `fast`: Main crate containing the client and server binaries
-- `fast-proto`: Protocol implementation and client libraries
-- `fast-server`: Server implementation
+- `kade`: Main crate containing the client and server binaries
+- `kade-proto`: Protocol implementation and client libraries
+- `kade-server`: Server implementation
 
 The server uses Tokio for async I/O and supports graceful shutdown with state preservation.

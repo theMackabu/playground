@@ -1,7 +1,7 @@
 [project]
-name = "fast"
+name = "kade"
 version = "0.1.3"
 
 [tasks]
-cli.script = "fleet run -q --release --bin fast-cli"
-server.script = "fleet run --release --bin fast-server -- --state state.fdb"
+cli.script = "fleet run -q --release --bin kade-cli"
+server.script = "fleet run --release --bin kade-server"

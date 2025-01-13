@@ -3,20 +3,20 @@ version.workspace = true
 license.workspace = true
 edition.workspace = true
 
-name = "fast"
+name = "kade"
 readme = "../../README.md"
 description = "Flexible Asynchronous Storage and Transport "
 
 [lib]
-name = "fast"
-path = "fast.rs"
+name = "kade"
+path = "kade.rs"
 
 [[bin]]
-name = "fast-cli"
+name = "kade-cli"
 path = "client.rs"
 
 [[bin]]
-name = "fast-server"
+name = "kade-server"
 path = "server.rs"
 
 [dependencies]
@@ -27,7 +27,7 @@ clap.workspace = true
 bytes.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-fast-proto.workspace = true
-fast-server.workspace = true
+kade-proto.workspace = true
+kade-server.workspace = true
 parking_lot.workspace = true
 tracing-subscriber.workspace = true
