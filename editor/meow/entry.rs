@@ -76,7 +76,9 @@ fn setup_panic() {
     };
 }
 
-pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent) -> TerminalBuffer {
+pub fn update_and_render_to_buffer(
+    editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, filepath: &Path, relative_line_numbers: bool, event: UiEvent, language: &Option<String>,
+) -> TerminalBuffer {
     let lines = LineNumbers::new(editor.get_first_visible_line(), editor.len_lines(), editor.get_current_line() + 1, relative_line_numbers);
 
     let total_lines = editor.len_lines();
@@ -88,11 +90,13 @@ pub fn update_and_render_to_buffer(editor: &mut TextEditor<TermLineLayoutSetting
         Err(_) => 0,
     };
 
+    let file_type = if let Some(lang) = language { &PathBuf::from(format!("file.{lang}")) } else { filepath };
+
     let status_bar = StatusBar::new()
         .filepath(filepath)
         .save_status(editor.has_changed_since_save())
         .file_size(file_size, buffer_size)
-        .file_type(utils::file_type(filepath))
+        .file_type(utils::file_type(file_type))
         .line_ending_type(editor.get_line_ending_type().to_string())
         .file_encoding(editor.get_file_encoding())
         .position(editor.get_row_and_column())
@@ -177,7 +181,7 @@ fn parse_keybind(keybind: &str) -> Option<(KeyModifiers, KeyCode)> {
 
 fn handle_key_event(
     event: KeyEvent, editor: &mut TextEditor<TermLineLayoutSettings>, keybinds: &config::Keybinds, clip: &mut String, system_clip: &mut Option<Clipboard>, file_path: &Path, width: usize,
-    height: usize, relative_line_numbers: bool, current_buffer: &mut Vec<Char>,
+    height: usize, relative_line_numbers: bool, current_buffer: &mut Vec<Char>, language: &Option<String>,
 ) -> UiEvent {
     let KeyEvent { code, modifiers, .. } = event;
 
@@ -187,7 +191,7 @@ fn handle_key_event(
         if let Some((kb_mod, kb_code)) = parse_keybind(&keybind) {
             if code == kb_code && modifiers == kb_mod {
                 debug!("Matched keybind for action: {}", action);
-                return perform_action(action, editor, clip, system_clip, file_path, width, height, relative_line_numbers, current_buffer);
+                return perform_action(action, editor, clip, system_clip, file_path, width, height, relative_line_numbers, current_buffer, language);
             }
         }
     }
@@ -206,12 +210,12 @@ fn handle_key_event(
 
 fn perform_action(
     action: &str, editor: &mut TextEditor<TermLineLayoutSettings>, clip: &mut String, system_clip: &mut Option<Clipboard>, file_path: &Path, width: usize, height: usize, relative_line_numbers: bool,
-    current_buffer: &mut Vec<Char>,
+    current_buffer: &mut Vec<Char>, language: &Option<String>,
 ) -> UiEvent {
     match action {
         "quit" => {
             if editor.has_changed_since_save() {
-                match prompt_save(editor, width, height, file_path, relative_line_numbers) {
+                match prompt_save(editor, width, height, file_path, relative_line_numbers, language) {
                     SavePromptResult::Save => {
                         let string = editor.to_string();
                         if std::fs::create_dir_all(file_path.parent().unwrap()).is_ok() && std::fs::write(file_path, string).is_ok() {
@@ -348,17 +352,21 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
         tab_width,
         disable_mouse_interaction,
         keybinds,
+        language,
         ..
     } = args;
 
     setup_terminal(disable_mouse_interaction);
 
     let (mut width, mut height) = size().unwrap();
-    let mut editor = TextEditor::new(&file_content, TermLineLayoutSettings::new(tab_width), tab_width, newly_loaded, &file_path);
+    let mut editor = TextEditor::new(&file_content, TermLineLayoutSettings::new(tab_width), tab_width, newly_loaded, &file_path, &language);
     let mut clip = String::new();
     let mut system_clip = Clipboard::new().ok();
 
-    let (mut current_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing);
+    // TODO: add to the global struct
+    let language = &language;
+
+    let (mut current_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing, language);
 
     render(width as usize, cursor_position, &current_buffer, &[]);
 
@@ -375,6 +383,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                         &file_path,
                         relative_line_numbers,
                         UiEvent::Clicked(column as usize, row as usize, kind == MouseEventKind::Drag(MouseButton::Left)),
+                        language,
                     );
 
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
@@ -393,26 +402,27 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                         height as usize,
                         relative_line_numbers,
                         &mut current_buffer,
+                        language,
                     );
 
                     if ui_event == UiEvent::Quit {
                         break;
                     }
 
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, ui_event);
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, ui_event, language);
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
                     current_buffer = next_buffer;
                 }
 
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollUp, .. }) => {
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(-1));
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(-1), language);
 
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
                     current_buffer = next_buffer;
                 }
 
                 Event::Mouse(MouseEvent { kind: MouseEventKind::ScrollDown, .. }) => {
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(1));
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::ScrollBy(1), language);
 
                     render(width as usize, cursor_position, &next_buffer, &current_buffer);
                     current_buffer = next_buffer;
@@ -422,7 +432,7 @@ fn terminal_main(file_content: String, newly_loaded: bool, args: Parsed) {
                     width = size().unwrap().0;
                     height = size().unwrap().1;
 
-                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing);
+                    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width as usize, height as usize, &file_path, relative_line_numbers, UiEvent::Nothing, language);
                     render(width as usize, cursor_position, &next_buffer, &[]);
 
                     current_buffer = next_buffer;
@@ -441,10 +451,10 @@ enum SavePromptResult {
     Cancel(Vec<Char>),
 }
 
-fn prompt_save(mut editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, save_path: &Path, relative_line_numbers: bool) -> SavePromptResult {
+fn prompt_save(mut editor: &mut TextEditor<TermLineLayoutSettings>, width: usize, height: usize, save_path: &Path, relative_line_numbers: bool, language: &Option<String>) -> SavePromptResult {
     CommandLine::set(format!(" Save changes to {} before closing? (y,n,esc)", save_path.display()));
 
-    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width, height as usize, &save_path, relative_line_numbers, UiEvent::Nothing);
+    let (next_buffer, cursor_position) = update_and_render_to_buffer(&mut editor, width, height as usize, &save_path, relative_line_numbers, UiEvent::Nothing, language);
     render(width as usize, cursor_position, &next_buffer, &[]);
 
     loop {
@@ -487,6 +497,10 @@ struct Args {
     #[arg(long)]
     list_themes: bool,
 
+    /// Force detected language
+    #[arg(long, short)]
+    language: Option<String>,
+
     /// Display config path
     #[arg(long)]
     config_path: bool,
@@ -503,6 +517,7 @@ struct Parsed {
     theme: Option<String>,
     relative_line_numbers: bool,
     keybinds: config::Keybinds,
+    language: Option<String>,
 }
 
 static THEME: RwLock<Option<Theme>> = RwLock::new(None);
@@ -543,6 +558,7 @@ fn main() {
     }
 
     let args = Parsed {
+        language: args.language,
         theme: args.theme.or(config.theme),
         keybinds: config.keybinds.unwrap_or_default(),
         tab_width: args.tab_width.or(config.tab_width).unwrap_or(4),

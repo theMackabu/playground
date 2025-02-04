@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::ops::Range;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser, QueryCursor, Tree};
 use tree_sitter_highlight::HighlightConfiguration;
 use unicode_width::UnicodeWidthChar;
@@ -55,11 +55,13 @@ impl<L: LineLayout> Display for TextEditor<L> {
 }
 
 impl<L: LineLayout> TextEditor<L> {
-    pub fn new(content: &str, layout_settings: L, tab_width: usize, newly_loaded: bool, file_path: &Path) -> Self {
+    pub fn new(content: &str, layout_settings: L, tab_width: usize, newly_loaded: bool, file_path: &Path, language: &Option<String>) -> Self {
         let mut highlight_config = None;
         let mut parser = Parser::new();
 
-        if let Some((language, highlights, name)) = get_syntax(file_path) {
+        let file = if let Some(lang) = language { &PathBuf::from(format!("file.{lang}")) } else { file_path };
+
+        if let Some((language, highlights, name)) = get_syntax(file) {
             parser.set_language(&language).expect("Error setting language");
             highlight_config = Some(Self::create_highlight_config(language, highlights, name));
         }
