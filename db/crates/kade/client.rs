@@ -103,13 +103,13 @@ async fn execute_command(client: &mut Option<Client>, cmd: String) -> Result<()>
         }
 
         "dump" => {
-            let output = args.get(1).map(String::as_str).unwrap_or("state.fdb");
+            let output = args.get(1).map(String::as_str).unwrap_or("state.kade");
             conn.dump(Path::new(output)).await?;
             println!("Database state dumped to {:?}", output);
         }
 
         "load" => {
-            let input = args.get(1).map(String::as_str).unwrap_or("state.fdb");
+            let input = args.get(1).map(String::as_str).unwrap_or("state.kade");
             conn.load(Path::new(input)).await?;
             println!("Database state loaded from {:?}", input);
         }

@@ -13,7 +13,7 @@
 *.so linguist-detectable=false
 
 # hide all editor samples
-editor/samples/** linguist-generated=true
+# editor/samples/** linguist-generated=true
 
 # ignore all scheme files
 *.scm linguist-detectable=false
